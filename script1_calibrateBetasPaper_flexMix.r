@@ -113,7 +113,7 @@ fracTum<-round((fracA+fracB)/2,3)
 rm(fracA,fracB)
 
 ################################################################################
-###adjust  data
+###get test data
 
 ##filter X and get top5k
 betaData<-betaNew
@@ -162,6 +162,32 @@ str(testDat2)
 # - attr(*, "dimnames")=List of 2
 #  ..$ : chr [1:5000] "cg06712559" "cg17928920" "cg09248054" "cg27541454" ...
 #  ..$ : chr [1:236] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
+
+################################################################################
+###define function and output
+
+
+##define function with input = betas and purity estimate
+  ##output = line parameters for L1/L2/L3
+adjustBeta<-function(methylation=NULL,purity=NULL) {
+
+
+
+
+}
+
+
+set.seed(1341)
+y<-testDat2[sample(1:nrow(testDat2),1),] 
+y<-y+rnorm(length(y),mean=0,sd=.01)
+x<-fracTum
+
+model <- stepFlexmix(y ~ x,k = 1:3, nrep = 7,verbose = FALSE)
+model <- getModel(model, "BIC")
+
+plot(x,y,col=clusters(model),pch=16)
+
+
 
 pdf("testFlexmix_100fromTop5k.pdf",width=12,height=12)
 par(mfrow=c(2,1))
