@@ -14,9 +14,9 @@ HOME<-"~/hdd1/adjustBetas"
 GIT<-"~/Documents/adjustBetas"
 
 ##home
-# dir.create("I:/data/adjustBetas")
-# HOME<-"I:/data/adjustBetas"
-# GIT<-"F:/gitProjects/adjustBetas"
+ dir.create("I:/data/adjustBetas")
+ HOME<-"I:/data/adjustBetas"
+ GIT<-"F:/gitProjects/adjustBetas"
 
 ##home
 #setwd("I:/Lund University/Staaf_lab - Documents/tnbc_project/mattias/")
