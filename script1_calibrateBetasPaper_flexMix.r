@@ -166,276 +166,104 @@ str(testDat2)
 ################################################################################
 ###define function and output
 
-
 ##define function with input = betas and purity estimate
   ##output = line parameters for L1/L2/L3
-adjustBeta<-function(methylation=NULL,purity=NULL) {
+adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3) {
+  #define variables
+  x<-as.numeric(purity)
+  x2<-1-as.numeric(purity)
+  y<-as.numeric(methylation)
+  #calculate global corr
+  gl.corr<-cor(x,y)
+  #add small gaussian noise to x - problem with large number of zero samples
+  y2<-y+rnorm(length(y),mean=0,sd=.005)  
+  #do modeling 
+  model <- stepFlexmix(y2 ~ x,k = 1:nmax, nrep = nrep,verbose = FALSE)
+  model <- getModel(model, "BIC")
+  #get clusters
+  cl<-clusters(model)
+  ##get line parameters for each pop - calculate from data - use original y
+  res.norm<-unlist(lapply(1:nmax,function(z) { 
+    if(z %in% cl) {
+      m<-lm(y[cl==z]~x[cl==z])
+      r<-coefficients(m)[1]+residuals(m)
+      names(r)<-snames[cl==z]
+      r
+    } else { NULL }
+  }))
+  res.norm<-res.norm[snames]
+  ##get line parameters for each pop - calculate from data - use original y
+  res.tum<-unlist(lapply(1:nmax,function(z) { 
+    if(z %in% cl) {
+      m<-lm(y[cl==z]~x2[cl==z])
+      r<-coefficients(m)[1]+residuals(m)
+      names(r)<-snames[cl==z]
+      r
+    } else { NULL }
+  }))
+  res.tum<-res.tum[snames]
 
+  res.int<-round(as.numeric(unlist(lapply(slot(model,"components"),function(z) slot(z[[1]],"parameters")$coef[1]))),3)
+  res.slope<-round(as.numeric(unlist(lapply(slot(model,"components"),function(z) slot(z[[1]],"parameters")$coef[2]))),3)
 
+  ##cap at 0 and 1
+  res.tum[res.tum > 1] <- 1
+  res.tum[res.tum < 0] <- 0
+  res.norm[res.norm > 1] <- 1
+  res.norm[res.norm < 0] <- 0
 
+  #round
+  res.tum<-round(res.tum,3)
+  res.norm<-round(res.norm,3)
 
+  ##return some stats
+  return( list(y.norm=res.norm,
+    y.tum=res.tum,
+    groups=cl,
+    n.groups=length(levels(factor(cl))),
+    med.norm=median(res.norm),
+    glob.cor=gl.corr,
+    avg.betaDiff=mean(y-res.tum),
+    model.intercepts=res.int,
+    model.slopes=res.slope   
+    )
+  )
 }
 
+##do test set
+ptm<-proc.time()
 
-set.seed(1341)
-y<-testDat2[sample(1:nrow(testDat2),1),] 
-y<-y+rnorm(length(y),mean=0,sd=.01)
-x<-fracTum
+res<-apply(testDat2,1,function(x) {
+  adjustBeta(methylation=x,purity=fracTum,snames=colnames(testDat2),nmax=3,nrep=3)
+})
 
-model <- stepFlexmix(y ~ x,k = 1:3, nrep = 7,verbose = FALSE)
-model <- getModel(model, "BIC")
+proc.time()-ptm
 
-plot(x,y,col=clusters(model),pch=16)
+##
+table(unlist(lapply(res,function(x) x$n.groups)))
+   # 1    2    3 
+   # 1  783 4216 
 
+##
+plot(unlist(lapply(res,function(x) x$model.intercepts)),unlist(lapply(res,function(x) x$model.slopes)),pch=16,cex=.3)
 
+hist(unlist(lapply(res,function(x) x$model.intercepts)),breaks=51)
 
-pdf("testFlexmix_100fromTop5k.pdf",width=12,height=12)
-par(mfrow=c(2,1))
-
-set.seed(12345)
-for(i in sample(1:nrow(testDat2),100)) {
-
-y<-testDat2[i,] + c(.001,-.001)  ##flexmix throws error if one pop has e.g all zeros, add small fudgefactor
-x<-fracTum
-
-model <- stepFlexmix(y ~ x,k = 1:2, nrep = 7,verbose = FALSE)
-model <- getModel(model, "BIC")
-#model <- flexmix(y ~ x, k = 2)#,control = list(iter.max=25))
-plot(x, y, col = clusters(model),pch=16,main="flexmix",xlab="tum %",ylab="beta",sub=paste0("row ",i),xlim=c(0,1),ylim=c(0,1))
-if(ncol(parameters(model))>1) {
-  abline(parameters(model)[1:2, 1], col = "blue", lwd = 3)
-  abline(parameters(model)[1:2, 2], col = "green", lwd = 3)
-} else {
-  abline(parameters(model)[1:2, 1], col = "blue", lwd = 3)
-}
-
-dist2d <- function(a,b,c) {
-  ya1 <- a[2]
-  yb1 <- a[1]
-  ya2 <- b[2]
-  yb2 <- b[1]
-  ##do not correct above .975 or 0.025
-  d<-which.min( c( (abs(yb1+ya1*c[1]-c[2])/sqrt(ya1^2+1)),
-    (abs(yb2+ya2*c[1]-c[2])/sqrt(ya2^2+1)) ) )
-  ##do not correct below intercept of other line
-  #frx<-function(x,cc) x*cc[2]+cc[1]
-  #if( d==1  & frx(c[1],b) < c[2] ) d<-2
-  #if( d==2  & frx(c[1],a) > c[2] ) d<-1
-  return(d)
-}
-
-if(ncol(parameters(model))>1) {
-  dd<-apply(cbind(x,y),1,function(zz) { dist2d(a=parameters(model)[1:2, 1],b=parameters(model)[1:2, 2],c=zz) })
-  plot(x, y, col = dd,pch=c(15,16)[1 + (dd==clusters(model))],main="reassigned d2line",,xlab="tum %",ylab="beta",xlim=c(0,1),ylim=c(0,1))
-  abline(lm(y[dd==1]~x[dd==1]),col=4,lwd=3)
-  abline(lm(y[dd==2]~x[dd==2]),col=3,lwd=3)
-  legend("right",legend=c("unchanged","changed"),col=1,pch=c(16,15),bty="n")
-} else {
-  dd<-clusters(model)
-  plot(x, y, col = dd,pch=c(15,16)[1 + (dd==clusters(model))],main="reassigned d2line",,xlab="tum %",ylab="beta",xlim=c(0,1),ylim=c(0,1))
-  abline(lm(y[dd==1]~x[dd==1]),col=4,lwd=3)
-}
-rm(x,y,model,dd)
-
-}
-
-dev.off()
-
-##get just random CpGs
-set.seed(20200518)
-testDat3<-betaData[sample(1:nrow(betaData),5000),]
-
-str(testDat3)
-# num [1:5000, 1:236] 0.379 0.06 0.15 0.962 0.012 0.539 0.97 0.909 1 0.457 ...
-# - attr(*, "dimnames")=List of 2
-#  ..$ : chr [1:5000] "cg15986668" "cg10065883" "cg24015249" "cg26857712" ...
-#  ..$ : chr [1:236] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
-
-pdf("testFlexmix_100fromRnd5k.pdf",width=12,height=12)
-par(mfrow=c(2,1))
-
-set.seed(12345)
-for(i in sample(1:nrow(testDat3),100)) {
-
-y<-testDat3[i,] + c(.001,-.001)  ##flexmix throws error if one pop has e.g all zeros, add small fudgefactor
-x<-fracTum
-
-model <- stepFlexmix(y ~ x,k = 1:2, nrep = 7,verbose = FALSE)
-model <- getModel(model, "BIC")
-#model <- flexmix(y ~ x, k = 2)#,control = list(iter.max=25))
-plot(x, y, col = clusters(model),pch=16,main="flexmix",xlab="tum %",ylab="beta",sub=paste0("row ",i),xlim=c(0,1),ylim=c(0,1))
-if(ncol(parameters(model))>1) {
-  abline(parameters(model)[1:2, 1], col = "blue", lwd = 3)
-  abline(parameters(model)[1:2, 2], col = "green", lwd = 3)
-} else {
-  abline(parameters(model)[1:2, 1], col = "blue", lwd = 3)
-}
-
-dist2d <- function(a,b,c) {
-  ya1 <- a[2]
-  yb1 <- a[1]
-  ya2 <- b[2]
-  yb2 <- b[1]
-  ##do not correct above .975 or 0.025
-  d<-which.min( c( (abs(yb1+ya1*c[1]-c[2])/sqrt(ya1^2+1)),
-    (abs(yb2+ya2*c[1]-c[2])/sqrt(ya2^2+1)) ) )
-  ##do not correct below intercept of other line
-  #frx<-function(x,cc) x*cc[2]+cc[1]
-  #if( d==1  & frx(c[1],b) < c[2] ) d<-2
-  #if( d==2  & frx(c[1],a) > c[2] ) d<-1
-  return(d)
-}
-
-if(ncol(parameters(model))>1) {
-  dd<-apply(cbind(x,y),1,function(zz) { dist2d(a=parameters(model)[1:2, 1],b=parameters(model)[1:2, 2],c=zz) })
-  plot(x, y, col = dd,pch=c(15,16)[1 + (dd==clusters(model))],main="reassigned d2line",,xlab="tum %",ylab="beta",xlim=c(0,1),ylim=c(0,1))
-  abline(lm(y[dd==1]~x[dd==1]),col=4,lwd=3)
-  abline(lm(y[dd==2]~x[dd==2]),col=3,lwd=3)
-  legend("right",legend=c("unchanged","changed"),col=1,pch=c(16,15),bty="n")
-} else {
-  dd<-clusters(model)
-  plot(x, y, col = dd,pch=c(15,16)[1 + (dd==clusters(model))],main="reassigned d2line",,xlab="tum %",ylab="beta",xlim=c(0,1),ylim=c(0,1))
-  abline(lm(y[dd==1]~x[dd==1]),col=4,lwd=3)
-}
-rm(x,y,model,dd)
-}
-
-dev.off()
-
-################################################################################
-###test some new stuff
-
-
-(yn ~ x + I(x^2)
-model = list(FLXMRglm(yn ~ . + I(x^2)),
-                                 FLXMRglm(yp ~ ., family = "poisson")))
-
-ex1 <- flexmix(yn ~ 1, data = NPreg, k = 2,
-  model = list(FLXMRglm(yn ~ . + I(x^2)),
-               FLXMRglm(yn ~ . )) )
-parameters(ex1)
-
-
-
-
-mo1 <- FLXMRglm(family = "gaussian")
-mo2 <- FLXMRglm(family = "gaussian")
-mo3 <- FLXMRglm(family = "gaussian")
-flexfit <- flexmix(Petal.Width ~ 1, data = iris, k = 3, model = list(mo1, mo2, mo3))
-table(clusters(flexfit))
-
-mo1 <- FLXMRglm(family = "gaussian")
-flexfit <- flexmix(Petal.Width ~ 1, data = iris, k = 3, model = list(mo1))
-table(clusters(flexfit))
-
-mo1 <- FLXMRglm(family = "gaussian")
-mo2 <- FLXMRglm(family = "gaussian")
-flexmix(yn ~ x + I(x^2), data = NPreg, k = 2, model = list(mo1, mo2) )
-
-
-
-
-pdf("testFlexmix_100fromRnd5k.pdf",width=12,height=12)
-par(mfrow=c(2,1))
-
-set.seed(12345)
-for(i in sample(1:nrow(testDat3),100)) {
-
-y<-testDat3[i,] + c(.001,-.001)  ##flexmix throws error if one pop has e.g all zeros, add small fudgefactor
-x<-fracTum
-
-y<-testDat2[761,] + c(.001,-.001)  ##flexmix throws error if one pop has e.g all zeros, add small fudgefactor
-
-df<-as.data.frame(cbind(x=x,y=y))
-
-mo1 <- FLXMRglm(family = "gaussian")
-mo2 <- FLXMRglm(family = "gaussian")
-mo3 <- FLXMRglm(family = "gaussian")
-flexfit <- flexmix(y ~ x, data = df, k = 3, model = list(mo1, mo2,mo3))
-plot(x,y,col=clusters(flexfit))
-parameters(flexfit)
-
-
-mo1 <- FLXMRglm(family = "gaussian")
-flexfit <- flexmix(y ~ x, data = df, k = 3,model = list(mo1))
-plot(x,y,col=clusters(flexfit))
-parameters(flexfit)
-
-model <- stepFlexmix(y ~ x,k = 1:3, nrep = 5,verbose = FALSE)
-model <- getModel(model, "BIC")
-plot(x,y,col=clusters(model))
-parameters(model)
-
-
-model <- flexfit(
-model <- getModel(model, "BIC")
-#model <- flexmix(y ~ x, k = 2)#,control = list(iter.max=25))
-plot(x, y, col = clusters(model),pch=16,main="flexmix",xlab="tum %",ylab="beta",sub=paste0("row ",i),xlim=c(0,1),ylim=c(0,1))
-if(ncol(parameters(model))>1) {
-  abline(parameters(model)[1:2, 1], col = "blue", lwd = 3)
-  abline(parameters(model)[1:2, 2], col = "green", lwd = 3)
-} else {
-  abline(parameters(model)[1:2, 1], col = "blue", lwd = 3)
-}
-
-dist2d <- function(a,b,c) {
-  ya1 <- a[2]
-  yb1 <- a[1]
-  ya2 <- b[2]
-  yb2 <- b[1]
-  ##do not correct above .975 or 0.025
-  d<-which.min( c( (abs(yb1+ya1*c[1]-c[2])/sqrt(ya1^2+1)),
-    (abs(yb2+ya2*c[1]-c[2])/sqrt(ya2^2+1)) ) )
-  ##do not correct below intercept of other line
-  #frx<-function(x,cc) x*cc[2]+cc[1]
-  #if( d==1  & frx(c[1],b) < c[2] ) d<-2
-  #if( d==2  & frx(c[1],a) > c[2] ) d<-1
-  return(d)
-}
-
-if(ncol(parameters(model))>1) {
-  dd<-apply(cbind(x,y),1,function(zz) { dist2d(a=parameters(model)[1:2, 1],b=parameters(model)[1:2, 2],c=zz) })
-  plot(x, y, col = dd,pch=c(15,16)[1 + (dd==clusters(model))],main="reassigned d2line",,xlab="tum %",ylab="beta",xlim=c(0,1),ylim=c(0,1))
-  abline(lm(y[dd==1]~x[dd==1]),col=4,lwd=3)
-  abline(lm(y[dd==2]~x[dd==2]),col=3,lwd=3)
-  legend("right",legend=c("unchanged","changed"),col=1,pch=c(16,15),bty="n")
-} else {
-  dd<-clusters(model)
-  plot(x, y, col = dd,pch=c(15,16)[1 + (dd==clusters(model))],main="reassigned d2line",,xlab="tum %",ylab="beta",xlim=c(0,1),ylim=c(0,1))
-  abline(lm(y[dd==1]~x[dd==1]),col=4,lwd=3)
-}
-rm(x,y,model,dd)
-}
-
-dev.off()
-
-
-
-
+plot(unlist(lapply(res,function(x) abs(x$glob.cor))),unlist(lapply(res,function(x) abs(x$avg.betaDiff))))
 
 ################################################################################
 ###gather adjusted data and calculate new data from it..
 
-
-
-
-
-source("function_doLmTests_modified_3.r")
-system.time( gg<-apply(testDat2,1,doLmTests) )
-#   user  system elapsed 
-# 211.08    0.73  212.36 
-  
-table(unlist(lapply(gg,function(x) x$oneGroup)))
-#FALSE  TRUE 
-# 4714   286 
-
 ##check stats
-temp4<-do.call("rbind",lapply(gg,function(x) x$methCalTum))
-rownames(temp4)<-varF
-temp5<-do.call("rbind",lapply(gg,function(x) x$methCalNorm))
-rownames(temp5)<-varF
+temp4<-do.call("rbind",lapply(res,function(x) x$y.tum))
+#rownames(temp4)<-rownames(testDat2)
+temp5<-do.call("rbind",lapply(res,function(x) x$y.norm))
+#rownames(temp5)<-rownames(testDat2)
 
 table(apply(temp4,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp5,1,function(x) sum(is.na(x))))
 #   0
 #5000
 
@@ -446,13 +274,14 @@ quantile(testDat2)
 #0.000 0.111 0.409 0.686 1.000
 
 quantile(temp4)
-#   0%   25%   50%   75%  100% 
-#0.000 0.043 0.370 0.905 1.000 
+#    0%   25%   50%   75%  100% 
+# 0.000 0.035 0.497 0.964 1.000 
 
 ##Plot histogram of betas before and after correction
-pdf("calibrateBetasPaper/20191203_top5k_betaDistribution_tumors_beforeAfterCorrection.pdf",width=8,height=8,useDingbats=F)
+pdf(paste0(HOME,"/20191203_top5k_betaDistribution_tumors_beforeAfterCorrection.pdf"),width=8,height=8,useDingbats=F)
+
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot(1,xlim=range(round(density(temp4)$x,1)),ylim=range(round(density(temp4)$y,1)),type="n",las=1,axes=F,
+plot(1,xlim=range(round(density(temp4)$x,1)),ylim=range(round(density(temp4)$y,1))+c(0,.5),type="n",las=1,axes=F,
   xlab="beta",ylab="density"
 )
 lines(density(temp4),col=2,lwd=2)
@@ -463,16 +292,17 @@ legend("topright",legend=c("unadjusted beta","adjusted beta"),col=c(1,2),lwd=2,b
 dev.off()
 
 ##Plot histogram of betas before and after correction
-pdf("calibrateBetasPaper/20191203_top5k_correlationTumorFrac_beforeCorrection.pdf",width=8,height=8,useDingbats=F)
+pdf(paste0(HOME,"/20191203_top5k_correlationTumorFrac_beforeCorrection.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot(unlist(lapply(gg,function(x) abs(x$globalCorr) )),
-  unlist(lapply(gg,function(x) x$methCalAvgDelta )),
-  pch=16,cex=.5,
+plot(unlist(lapply(res,function(x) abs(x$glob.cor) )),
+  unlist(lapply(res,function(x) abs(x$avg.betaDiff) )),
+  pch=16,cex=.5,xlim=c(0,1),ylim=c(0,1),
   main="Average beta correction vs global correlation",
   xlab="absolute global correlation unadjusted beta - tumor fraction",
-  ylab="average beta difference post correction",
-  axes=F
+  ylab="mean absolute beta difference pre-post correction",
+  axes=F#,type="n"
 )
+abline(a=0,b=1,lwd=3,col=2,lty=2)
 axis(1,lwd=2,las=1)
 axis(2,lwd=2,las=1)
 dev.off()
@@ -482,18 +312,19 @@ rm(temp4,temp5)
 ################################################################################      ##HÄR
 ###plot top5k clusters - unadjuster order
 
-testDat2<-betaNew[varF,samples_use]
+# testDat2<-betaNew[varF,samples_use]
 
-str(testDat2)
-# num [1:5000, 1:235] 0.008 0.044 0.163 0.705 0.65 0.067 0.057 0.704 0.06 0 ...
-# - attr(*, "dimnames")=List of 2
-#  ..$ : chr [1:5000] "cg06712559" "cg17928920" "cg09248054" "cg27541454" ...
-#  ..$ : chr [1:235] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
+# str(testDat2)
+# # num [1:5000, 1:235] 0.008 0.044 0.163 0.705 0.65 0.067 0.057 0.704 0.06 0 ...
+# # - attr(*, "dimnames")=List of 2
+# #  ..$ : chr [1:5000] "cg06712559" "cg17928920" "cg09248054" "cg27541454" ...
+# #  ..$ : chr [1:235] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
 
-temp1<-do.call("rbind",lapply(gg,function(x) x$methCalTum))
-rownames(temp1)<-varF
-temp2<-do.call("rbind",lapply(gg,function(x) x$methCalNorm))
-rownames(temp2)<-varF
+##check stats
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+#rownames(temp1)<-rownames(testDat2)
+temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
+#rownames(temp2)<-rownames(testDat2)
 
 table(apply(temp1,1,function(x) sum(is.na(x))))
 #   0
@@ -507,26 +338,15 @@ testDat2<-testDat2[!apply(temp1,1,function(x) any(is.na(x))),]
 temp2<-temp2[!apply(temp1,1,function(x) any(is.na(x))),]
 temp1<-temp1[!apply(temp1,1,function(x) any(is.na(x))),]
 
-##remove chrX-rows
-testDat2<-testDat2[as.character(seqnames(probeAnno[(rownames(temp1))]))!="chrX",]
-temp2<-temp2[as.character(seqnames(probeAnno[(rownames(temp1))]))!="chrX",]
-temp1<-temp1[as.character(seqnames(probeAnno[(rownames(temp1))]))!="chrX",]
-
 table(seqnames(probeAnno[(rownames(temp1))]))
 # chr1 chr22  chr2  chr3  chr4  chr5  chr6  chr7  chr8  chr9 chr10 chr11 chr12
 #  565    64   415   254   160   355   500   341   366    99   304   201   222
 #chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21  chrX  chrY
 #  108   126    94   132   209    95   234   108    48     0     0
 
-##filter to top 5000 by SD (all)
-filt<-apply(temp1,1,sd)
-filt<-filt >= quantile(filt,1-(5000/length(filt)))
-sum(filt)
-#[1] 5000
-testDat<-testDat2[filt,]
-temp2<-temp2[filt,]
-temp1<-temp1[filt,]
-rm(filt)
+testDat<-testDat2[,samples_use]
+temp1<-temp1[,samples_use]
+temp2<-temp2[,samples_use]
 
 ##do clustering
 c1<-cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5)
@@ -553,7 +373,7 @@ my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984
     ,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
   clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, unadj clust , pearC/euclR",cutree_cols=5
@@ -561,7 +381,7 @@ pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_adjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, unadj clust , pearC/euclR",cutree_cols=5
@@ -569,7 +389,7 @@ pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_normalBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_normalBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, \"inferred normal\", unadj clust , pearC/euclR",cutree_cols=5
@@ -578,7 +398,7 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
 dev.off()
 
 ##infiltration estimeates by group
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta_forInfiltrationEstimate.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
   clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, unadj clust , pearC/euclR",cutree_cols=5
@@ -586,7 +406,7 @@ pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_adjBeta_forInfiltrationEstimate.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_adjBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,cluster_rows = r1, cluster_cols = c3,
   show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, unadj clust , pearC/euclR",cutree_cols=5
@@ -594,7 +414,7 @@ pheatmap(temp1,cluster_rows = r1, cluster_cols = c3,
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_normBeta_forInfiltrationEstimate.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_normBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3,
   show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, \"inferred normal\", unadj clust , pearC/euclR",cutree_cols=5
@@ -602,7 +422,7 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3,
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.tiff",width=6*500,height=8*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.tiff"),width=6*500,height=8*500,units="px",res=500,compression="lzw")
 par(mfrow=c(2,1),font.lab=2,font=2,lwd=2,font.axis=2)
 boxplot(clinAnno[names(c1),"BATTENBERG_TUMOUR_FRAC"]~factor(c1,levels=c2),varwidth=T,ylim=c(0,1),
   col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[c2],ylab="Battenberg tumor%"
@@ -612,7 +432,7 @@ boxplot(clinAnno[names(c1),"ASCAT_TUM_FRAC"]~factor(c1,levels=c2),varwidth=T,yli
   )
 dev.off()
 
-pdf("calibrateBetasPaper/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.pdf",width=12,height=12,useDingbats=F)
+pdf(paste0(HOME,"/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.pdf"),width=12,height=12,useDingbats=F)
 par(mfrow=c(2,1),font.lab=2,font=2,lwd=2,font.axis=2)
 boxplot(clinAnno[names(c1),"BATTENBERG_TUMOUR_FRAC"]~factor(c1,levels=c2),varwidth=T,ylim=c(0,1),
   col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[c2],ylab="Battenberg tumor%",las=1
@@ -623,14 +443,14 @@ boxplot(clinAnno[names(c1),"ASCAT_TUM_FRAC"]~factor(c1,levels=c2),varwidth=T,yli
 dev.off()
 
 library(magick)
-a1<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta_forInfiltrationEstimate.tiff")
-a2<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.tiff")
-a3<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_adjBeta_forInfiltrationEstimate.tiff")
-a4<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_unadjClust_normBeta_forInfiltrationEstimate.tiff")
+a1<-image_read(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta_forInfiltrationEstimate.tiff"))
+a2<-image_read(paste0(HOME,"/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.tiff"))
+a3<-image_read(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_adjBeta_forInfiltrationEstimate.tiff"))
+a4<-image_read(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_normBeta_forInfiltrationEstimate.tiff"))
 
-image_write(image_scale(image_append(c(a1,a2)),5000), path = "calibrateBetasPaper/20191203_top5k_unadjClust_unadjBeta_combinedIfiltration.tiff", format = "tiff")
-image_write(image_scale(image_append(c(a3,a2)),5000), path = "calibrateBetasPaper/20191203_top5k_unadjClust_adjBeta_combinedIfiltration.tiff", format = "tiff")
-image_write(image_scale(image_append(c(a4,a2)),5000), path = "calibrateBetasPaper/20191203_top5k_unadjClust_normBeta_combinedIfiltration.tiff", format = "tiff")
+image_write(image_scale(image_append(c(a1,a2)),5000), path = paste0(HOME,"/20191203_top5k_unadjClust_unadjBeta_combinedIfiltration.tiff"), format = "tiff")
+image_write(image_scale(image_append(c(a3,a2)),5000), path = paste0(HOME,"/20191203_top5k_unadjClust_adjBeta_combinedIfiltration.tiff"), format = "tiff")
+image_write(image_scale(image_append(c(a4,a2)),5000), path = paste0(HOME,"/20191203_top5k_unadjClust_normBeta_combinedIfiltration.tiff"), format = "tiff")
 
 rm(a1,a2,a3,a4)
 
@@ -664,7 +484,7 @@ my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984
     ,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
   clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
@@ -672,7 +492,7 @@ pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, adj clust ,pearC/euclR",cutree_cols=5
@@ -680,7 +500,7 @@ pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_normalBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_normalBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, \"inferred normal\", adj clust , pearC/euclR",cutree_cols=5
@@ -689,7 +509,7 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
 dev.off()
 
 ##infiltration estimeates by group
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta_forInfiltrationEstimate.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
   clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
@@ -697,7 +517,7 @@ pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_unadjBeta_forInfiltrationEstimate.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_unadjBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(testDat,cluster_rows = r1, cluster_cols = c3,
   show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, adj clust , pearC/euclR",cutree_cols=5
@@ -705,7 +525,7 @@ pheatmap(testDat,cluster_rows = r1, cluster_cols = c3,
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_normBeta_forInfiltrationEstimate.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_normBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3,
   show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, \"inferred normal\", adj clust , pearC/euclR",cutree_cols=5
@@ -713,7 +533,7 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3,
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.tiff",width=6*500,height=8*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.tiff"),width=6*500,height=8*500,units="px",res=500,compression="lzw")
 par(mfrow=c(2,1),font.lab=2,font=2,lwd=2,font.axis=2)
 boxplot(clinAnno[names(c1),"BATTENBERG_TUMOUR_FRAC"]~factor(c1,levels=c2),varwidth=T,ylim=c(0,1),
   col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[c2],ylab="Battenberg tumor%"
@@ -723,7 +543,7 @@ boxplot(clinAnno[names(c1),"ASCAT_TUM_FRAC"]~factor(c1,levels=c2),varwidth=T,yli
   )
 dev.off()
 
-pdf("calibrateBetasPaper/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.pdf",width=12,height=12,useDingbats=F)
+pdf(paste0(HOME,"/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.pdf"),width=12,height=12,useDingbats=F)
 par(mfrow=c(2,1),font.lab=2,font=2,lwd=2,font.axis=2)
 boxplot(clinAnno[names(c1),"BATTENBERG_TUMOUR_FRAC"]~factor(c1,levels=c2),varwidth=T,ylim=c(0,1),
   col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[c2],ylab="Battenberg tumor%",las=1
@@ -734,74 +554,19 @@ boxplot(clinAnno[names(c1),"ASCAT_TUM_FRAC"]~factor(c1,levels=c2),varwidth=T,yli
 dev.off()
 
 library(magick)
-a1<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta_forInfiltrationEstimate.tiff")
-a2<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.tiff")
-a3<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_unadjBeta_forInfiltrationEstimate.tiff")
-a4<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_adjClust_normBeta_forInfiltrationEstimate.tiff")
+a1<-image_read(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta_forInfiltrationEstimate.tiff"))
+a2<-image_read(paste0(HOME,"/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.tiff"))
+a3<-image_read(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_unadjBeta_forInfiltrationEstimate.tiff"))
+a4<-image_read(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_normBeta_forInfiltrationEstimate.tiff"))
 
-image_write(image_scale(image_append(c(a1,a2)),5000), path = "calibrateBetasPaper/20191203_top5k_adjClust_adjBeta_combinedIfiltration.tiff", format = "tiff")
-image_write(image_scale(image_append(c(a3,a2)),5000), path = "calibrateBetasPaper/20191203_top5k_adjClust_unadjBeta_combinedIfiltration.tiff", format = "tiff")
-image_write(image_scale(image_append(c(a4,a2)),5000), path = "calibrateBetasPaper/20191203_top5k_adjClust_normBeta_combinedIfiltration.tiff", format = "tiff")
+image_write(image_scale(image_append(c(a1,a2)),5000), path = paste0(HOME,"/20191203_top5k_adjClust_adjBeta_combinedIfiltration.tiff"), format = "tiff")
+image_write(image_scale(image_append(c(a3,a2)),5000), path = paste0(HOME,"/20191203_top5k_adjClust_unadjBeta_combinedIfiltration.tiff"), format = "tiff")
+image_write(image_scale(image_append(c(a4,a2)),5000), path = paste0(HOME,"/20191203_top5k_adjClust_normBeta_combinedIfiltration.tiff"), format = "tiff")
 
 rm(a1,a2,a3,a4)
 
 rm(sample_anno,my_colour,c1,c2,c3,c4,r1)
 
-################################################################################
-###plot top 5000 clusters - normal order
-
-##do clustering
-c1<-cutree( hclust( as.dist( 1-cor(temp2) ),method="ward.D"),5)
-c2<-unique(c1[hclust( as.dist( 1-cor(temp2) ),method="ward.D")$order])
-r1<-hclust( dist(temp2),method="ward.D")
-c3<-hclust( as.dist( 1-cor(temp2) ),method="ward.D")
-c4<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
-
-sample_anno<-data.frame(norm1000=c1,
-  adj5000=c4,
-  AIMS=tnbcClass$PAM50_AIMS,
-  TNBC=tnbcClass$TNBCtype,
-  #umap=factor(clusters.umap[samples_use,"class"]),
-  hrd3=factor(clinAnno[samples_use,"HRD.3"])
-  )
-rownames(sample_anno)<-samples_use
-sample_anno<-sample_anno[,ncol(sample_anno):1]
-
-my_colour = list(norm1000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
-    #umap = c("1" = "#5977ff", "2" = "#f74747"),
-    AIMS = c("Basal" = "red" , "Her2" = "pink" , "LumA" = "darkgreen" , "LumB" = "orange" , "Normal" = "grey"),
-    TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
-    ,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
-  )
-
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_normClust_normalBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(temp2,clustering_distance_rows = "euclidean",#"correlation"
-  clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
-  ,main="top 5000 by sd, \"inferred normal\", norm clust , pearC/euclR",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
-)
-dev.off()
-
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_normClust_unadjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="top 5000 by sd, unadj data, norm clust ,pearC/euclR",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
-)
-dev.off()
-
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_pear_eucl_normClust_adjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="top 5000 by sd, adj data, norm clust , pearC/euclR",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
-)
-dev.off()
-
-rm(sample_anno,my_colour,c1,c2,c3,c4,r1)
-
-################################################################################
 ################################################################################
 ###Check correlation "inferred normal" to true normal
 
@@ -826,21 +591,23 @@ ff<-ff[ff2]
 
 plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
 
+cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
+#[1] 0.760453
 (cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
-#[1] 0.4615736
+#[1] 0.0955181
 (cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="spe" ))
-#[1] 0.6843037
+#[1] 0.6630773
 (cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="pe" ))
-#[1] 0.376655
+#[1] -0.03931821
 (sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" ))
-#[1] 0.7752924
+#[1] 0.760453
 (fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" )$p.value)
 #[1] 0
 
 length(ff)
 #[1] 2902
 
-pdf("calibrateBetasPaper/20191203_top5kBySd_betaNormals_inferredVsActual.pdf",width=8,height=8,useDingbats=F)
+pdf(paste0(HOME,"/20191203_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16
   ,main="Correlation 450K normal - 850K inferred normal"
@@ -856,25 +623,28 @@ dev.off()
 
 rm(ff,fs,ff2)
 
+
+###HERE!!
+
 ################################################################################
 ###Save objects
 
 ##Save correction object
-correctionTop5000<-gg
+correctionTop5000<-res
 
 length(correctionTop5000)
 #[1] 5000
 
-save(correctionTop5000,file="calibrateBetasPaper/20191203_top5k_correctionObject_5000cpgs_235tumors.RData")
+save(correctionTop5000,file=paste0(HOME,"/20191203_top5k_correctionObject_5000cpgs_235tumors.RData"))
 #rm(gg)
 
 dataTop5000<-testDat
-save(dataTop5000,file="calibrateBetasPaper/20191203_top5k_testDataBetaMatrix.RData")
+save(dataTop5000,file=paste0(HOME,"/20191203_top5k_testDataBetaMatrix.RData"))
 
 rm(testDat)
 
 dataAdjTop5000<-temp1
-save(dataAdjTop5000,file="calibrateBetasPaper/20191203_top5k_testDataAdjBetaMatrix.RData")
+save(dataAdjTop5000,file=paste0(HOME,"/20191203_top5k_testDataAdjBetaMatrix.RData"))
 
 rm(temp1)
 rm(temp2)
