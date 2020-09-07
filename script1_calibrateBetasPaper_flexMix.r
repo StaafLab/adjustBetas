@@ -1025,7 +1025,7 @@ plot(density(resMat[,2]),xlim=c(-5,max(resMat)+c(5)),pch=16,cex=2,cex.lab=1.6,ce
   ,main="Discrimination of PAM50 Basal vs Rest split"
   ,xlab="-log10(p,Fisher test), 100 iterations",ylab="Density"
   ,type="n",las=1,axes=F,
-  ylim=c(0,max( c(density(resMat[,1])$y,density(resMat[,2])$y) ) )
+  ylim=c(0,max( c(density(resMat[,1])$y,density(resMat[,2])$y,density(resMat[,3])$y) ) )
 )
 lines(density(resMat[,1]),col="grey",lwd=3)
 lines(density(resMat[,2]),col=1,lwd=3)
@@ -1036,13 +1036,13 @@ abline(v=median(resMat[,2]),lwd=3,col=1,lty=2)
 abline(v=median(resMat[,3]),lwd=3,col=2,lty=2)
 abline(h=0,lwd=3,col=1)
 
-legend("top",legend=c("unadjusted beta","adjusted beta","dichotomized beta"),col=c("grey",1,2),lwd=3,bty="n",cex=1.6)
+legend("topright",legend=c("unadjusted beta","adjusted beta","dichotomized beta"),col=c("grey",1,2),lwd=3,bty="n",cex=1.6)
 
 axis(1,lwd=2,las=1,cex.axis=1.6)
 axis(2,lwd=2,las=1,cex.axis=1.6)
 dev.off()
 
-save(resMat,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData")
+save(resMat,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
 rm(resMat)
 
 rm(varF)
