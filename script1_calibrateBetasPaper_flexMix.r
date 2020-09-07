@@ -174,7 +174,8 @@ adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3) {
   x2<-1-as.numeric(purity)
   y<-as.numeric(methylation)
   #calculate global corr
-  gl.corr<-cor(x,y)
+  gl.corr<-suppressWarnings(cor(x,y))
+  gl.corr[is.na(gl.corr)]<-0
   #add small gaussian noise to x - problem with large number of zero samples
   y2<-y+rnorm(length(y),mean=0,sd=.005)  
   #do modeling 
@@ -215,10 +216,12 @@ adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3) {
   #round
   res.tum<-round(res.tum,3)
   res.norm<-round(res.norm,3)
+  res.orig<-round(methylation,3)
 
   ##return some stats
   return( list(y.norm=res.norm,
     y.tum=res.tum,
+    y.orig=res.orig,
     groups=cl,
     n.groups=length(levels(factor(cl))),
     med.norm=median(res.norm),
@@ -233,23 +236,26 @@ adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3) {
 ##do test set
 ptm<-proc.time()
 
+set.seed(20200904)
 res<-apply(testDat2,1,function(x) {
   adjustBeta(methylation=x,purity=fracTum,snames=colnames(testDat2),nmax=3,nrep=3)
 })
 
 proc.time()-ptm
+#    user  system elapsed 
+# 2203.11   45.42 2251.81 
 
 ##
 table(unlist(lapply(res,function(x) x$n.groups)))
    # 1    2    3 
-   # 1  783 4216 
+   # 1  777 4222 
 
-##
-plot(unlist(lapply(res,function(x) x$model.intercepts)),unlist(lapply(res,function(x) x$model.slopes)),pch=16,cex=.3)
+##testplots
+#plot(unlist(lapply(res,function(x) x$model.intercepts)),unlist(lapply(res,function(x) x$model.slopes)),pch=16,cex=.3)
 
-hist(unlist(lapply(res,function(x) x$model.intercepts)),breaks=51)
+#hist(unlist(lapply(res,function(x) x$model.intercepts)),breaks=51)
 
-plot(unlist(lapply(res,function(x) abs(x$glob.cor))),unlist(lapply(res,function(x) abs(x$avg.betaDiff))))
+#plot(unlist(lapply(res,function(x) abs(x$glob.cor))),unlist(lapply(res,function(x) abs(x$avg.betaDiff))))
 
 ################################################################################
 ###gather adjusted data and calculate new data from it..
@@ -623,9 +629,6 @@ dev.off()
 
 rm(ff,fs,ff2)
 
-
-###HERE!!
-
 ################################################################################
 ###Save objects
 
@@ -635,113 +638,47 @@ correctionTop5000<-res
 length(correctionTop5000)
 #[1] 5000
 
-save(correctionTop5000,file=paste0(HOME,"/20191203_top5k_correctionObject_5000cpgs_235tumors.RData"))
-#rm(gg)
+save(correctionTop5000,file=paste0(HOME,"/20191203_top5k_correctionObject_5000cpgs_236tumors.RData"))
 
 dataTop5000<-testDat
-save(dataTop5000,file=paste0(HOME,"/20191203_top5k_testDataBetaMatrix.RData"))
-
-rm(testDat)
+save(dataTop5000,file=paste0(HOME,"/20191203_top5k_testDataBetaMatrix_235withGex.RData"))
 
 dataAdjTop5000<-temp1
-save(dataAdjTop5000,file=paste0(HOME,"/20191203_top5k_testDataAdjBetaMatrix.RData"))
+save(dataAdjTop5000,file=paste0(HOME,"/20191203_top5k_testDataAdjBetaMatrix_235withGex.RData"))
 
-rm(temp1)
-rm(temp2)
-
-##write full matrices to file
-testDat2<-betaNew[rownames(dataTop5000),samples_use]
-
-str(testDat2)
-# num [1:5000, 1:235] 0.008 0.044 0.163 0.705 0.65 0.067 0.057 0.704 0.06 0 ...
-# - attr(*, "dimnames")=List of 2
-#  ..$ : chr [1:5000] "cg06712559" "cg17928920" "cg09248054" "cg27541454" ...
-#  ..$ : chr [1:235] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
-
-all(names(gg)==rownames(dataTop5000))
-#[1] TRUE
-
-temp1<-do.call("rbind",lapply(gg,function(x) x$methCalTum))
-rownames(temp1)<-rownames(dataTop5000)
-temp2<-do.call("rbind",lapply(gg,function(x) x$methCalNorm))
-rownames(temp2)<-rownames(dataTop5000)
-
-table(apply(temp1,1,function(x) sum(is.na(x))))
-#   0 
-#5000 
-
-##remove NA-rows
-testDat2<-testDat2[!apply(temp1,1,function(x) any(is.na(x))),]
-temp2<-temp2[!apply(temp1,1,function(x) any(is.na(x))),]
-temp1<-temp1[!apply(temp1,1,function(x) any(is.na(x))),]
-
-##remove chrX-rows
-testDat2<-testDat2[as.character(seqnames(probeAnno[(rownames(temp1))]))!="chrX",]
-temp2<-temp2[as.character(seqnames(probeAnno[(rownames(temp1))]))!="chrX",]
-temp1<-temp1[as.character(seqnames(probeAnno[(rownames(temp1))]))!="chrX",]
-
-table(seqnames(probeAnno[(rownames(temp1))]))
-# chr1 chr22  chr2  chr3  chr4  chr5  chr6  chr7  chr8  chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 
-#  565    64   415   254   160   355   500   341   366    99   304   201   222   108   126    94   132   209    95 
-#chr19 chr20 chr21  chrX  chrY 
-#  234   108    48     0     0 
-
-dim(temp1)
-#[1] 5000  235
-dim(temp2)
-#[1] 5000  235
-dim(testDat2)
-#[1] 5000  235
-
-##final objects
-Top5000DataRaw<-testDat2
-Top5000DataAdj<-temp1
-Top5000DataNorm<-temp2
-
-save(Top5000DataAdj,file="calibrateBetasPaper/20191203_top5k_AdjBetaMatrix_5000x235_SdZeroFilter_chrXfilter.RData")
-save(Top5000DataNorm,file="calibrateBetasPaper/20191203_top5k_normBetaMatrix_5000x235_SdZeroFilter_chrXfilter.RData")
-save(Top5000DataRaw,file="calibrateBetasPaper/20191203_top5k_rawBetaMatrix_5000x235_SdZeroFilter_chrXfilter.RData")
-
-all.equal(names(probeAnno[rownames(Top5000DataRaw)]),
-rownames(Top5000DataRaw)
-)
-#[1] TRUE
-
-Top5000_850kCoords<-probeAnno[rownames(Top5000DataRaw)]
-
-save(Top5000_850kCoords,file="calibrateBetasPaper/20191203_top5k_illumina850kCpgCoords_5000x235_SdZeroFilter_chrXfilter.RData")
-
-#rm(temp1,temp2,testDat2,gg)
+rm(correctionTop5000,dataTop5000,dataAdjTop5000)
 
 ################################################################################
 ### Do comparative plots
 
+testDat<-testDat2[,samples_use]
+
 ##alluvial of results
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
 unique(c1[hclust( as.dist( 1-cor(temp1) ),method="ward.D")$order])
-#[1] 3 5 1 2 4
+#[1] 5 4 2 3 1
 
-c1<-cutree( hclust( as.dist( 1-cor(testDat2) ),method="ward.D"),5)
-unique(c1[hclust( as.dist( 1-cor(testDat2) ),method="ward.D")$order])
+c1<-cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5)
+unique(c1[hclust( as.dist( 1-cor(testDat) ),method="ward.D")$order])
 #[1] 3 4 5 1 2
 
-cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(testDat2) ),method="ward.D"),5),
+cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5),
   adjusted=letters[1:5][cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)]
   ),stringsAsFactors=F)
 
 table(cl$unadjusted,cl$adjusted)
-#     a  b  c  d  e
-#  1 42 11  0  9  0
-#  2 39 12  0 30  0
-#  3  0  0 14  0  0
-#  4  4  0 28  0  0
-#  5  2  2  0 18 24
+  #    a  b  c  d  e
+  # 1 29 27  6  0  0
+  # 2 38 21 20  2  0
+  # 3  0  0  0  1 13
+  # 4  4  0  0 19  9
+  # 5 31  6  7  2  0
 
 cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
 cl$Var1<-factor(cl$Var1,levels=c("3","4","5","1","2"))
-cl$Var2<-factor(cl$Var2,levels=c("c","e","a","b","d"))
+cl$Var2<-factor(cl$Var2,levels=c("e","d","b","c","a"))
 
-(pal<-brewer.pal(5,"Set1")[c(3,5,1,2,4)])
+(pal<-brewer.pal(5,"Set1")[c(5,4,2,3,1)])
 #[1] "#4DAF4A" "#FF7F00" "#377EB8" "#984EA3" "#E41A1C"
 #names(pal)<-c("a","b","c","d","e")
 (pal2<-brewer.pal(5,"Set1")[c(3,4,5,1,2)])
@@ -758,7 +695,7 @@ q<-ggplot(cl,
                 ) +
   guides(fill = FALSE) +
   geom_stratum(width = 1/20, reverse = TRUE,colour="black",fill=c(pal2,pal)) +     #colour=c(pal2,pal),fill=c(pal2,pal)
-  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","a","b")),rev(c("c","e","a","b","d")))
+  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","a","b")),(c("e","d","b","c","a")))
     ) +
   scale_x_continuous(breaks = 1:2, labels = c("unadjusted", "adjusted")) +
   scale_fill_manual(values=rev(pal2)) +
@@ -779,19 +716,16 @@ q<-ggplot(cl,
     axis.ticks.y=element_blank()
     )
 
-pdf("calibrateBetasPaper/20191203_top5k_alluvial_pear_eucl_hClust_unadjBeta_to_adjBeta.pdf",width=12,height=12,useDingbats=F)
+pdf(paste0(HOME,"/20191203_top5k_alluvial_pear_eucl_hClust_unadjBeta_to_adjBeta.pdf"),width=12,height=12,useDingbats=F)
 q
 dev.off()
-rm(q)
 
-dev.off()
-
-rm(cl)
+rm(q,cl)
 
 ################################################################################
 ###Adjusted clustering
 
-testDat<-testDat2
+testDat<-testDat2[,samples_use]
 
 ##leave out dendrograms
 
@@ -823,7 +757,7 @@ my_colour = list(unadj5000=c("a"="#E41A1C","b"="#377EB8","c"="#4DAF4A","d"="#984
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
   clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
   ,main=" ",cutree_cols=5,fontsize=18
@@ -832,7 +766,7 @@ pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_unadjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main=" ",cutree_cols=5,fontsize=18
@@ -841,7 +775,7 @@ pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_normalBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_normalBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main=" ",cutree_cols=5,fontsize=18
@@ -850,7 +784,7 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_legend_pear_eucl_adjClust_normalBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_legend_pear_eucl_adjClust_normalBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=5,fontsize=18,fontsize_col=16
@@ -895,7 +829,7 @@ my_colour = list(unadj5000=c("a"="#E41A1C","b"="#377EB8","c"="#4DAF4A","d"="#984
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
   clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
   ,main="",cutree_cols=5,fontsize=18
@@ -904,7 +838,7 @@ pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_adjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=5,fontsize=18
@@ -913,7 +847,7 @@ pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_normalBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_normalBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=5,fontsize=18
@@ -922,7 +856,7 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_legend_pear_eucl_unadjClust_normalBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_legend_pear_eucl_unadjClust_normalBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=5,fontsize=18,fontsize_col=16
@@ -939,34 +873,34 @@ dev.off()
 ###Combine all
 
 library(magick)
-a1<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_unadjBeta.tiff")
-a2<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_normalBeta.tiff")
-a3<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff")
+a1<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_unadjBeta.tiff"))
+a2<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_normalBeta.tiff"))
+a3<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
 
-a4<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff")
-a5<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_normalBeta.tiff")
-a6<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_adjBeta.tiff")
+a4<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
+a5<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_normalBeta.tiff"))
+a6<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_adjBeta.tiff"))
 
-a7<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.tiff")
-a8<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.tiff")
+a7<-image_read(paste0(HOME,"/20191203_top5k_heatmap_ascat_battenberg_forInfiltrationEstimate.tiff"))
+a8<-image_read(paste0(HOME,"/20191203_top5k_heatmap_unadj_ascat_battenberg_forInfiltrationEstimate.tiff"))
 
-a11<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_legend_pear_eucl_adjClust_normalBeta.tiff")
-a12<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_legend_pear_eucl_unadjClust_normalBeta.tiff")
+a11<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_legend_pear_eucl_adjClust_normalBeta.tiff"))
+a12<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_legend_pear_eucl_unadjClust_normalBeta.tiff"))
 
 a11<-image_crop(a11,"1000x6000+3850")
 a12<-image_crop(a12,"1000x6000+3850")
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_white.tiff",width=.2*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
 par(mar=c(0,0,0,0))
 plot(1,type="n",axes=F,xlab="",ylab="")
 dev.off()
-a9<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_white.tiff")
+a9<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_white.tiff"))
 
-tiff("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_white2.tiff",width=18*500,height=.4*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_white2.tiff"),width=18*500,height=.4*500,units="px",res=500,compression="lzw")
 par(mar=c(0,0,0,0))
 plot(1,type="n",axes=F,xlab="",ylab="")
 dev.off()
-a10<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_white2.tiff")
+a10<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_white2.tiff"))
 
 out<-image_append(c(a9,
   a1,
@@ -992,7 +926,7 @@ out2<-image_scale(out2,"9000x")
 
 out3<-image_append(c(out2,a10,out),stack = T)
 
-image_write(out3, path = "calibrateBetasPaper/20191203_top5k_heatmap_noAnno_unadj_adj_combined.tiff", format = "tiff")
+image_write(out3, path = paste0(HOME,"/20191203_top5k_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
 
 rm(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,out,out2,out3)
 
@@ -1001,7 +935,13 @@ gc()
 ################################################################################
 ###Do plot with pairwise correlations "inferred normal" to normal
 
-pdf("calibrateBetasPaper/20191203_top5kBySd_betaNormals_allInferredVsActual.pdf",width=8,height=8,useDingbats=F)
+ff<-intersect( rownames(temp2) , rownames(beta_norm) )
+
+ff2<-!apply(beta_norm[ff,],1,function(z) any(is.na(z)))
+
+ff<-ff[ff2]
+
+pdf(paste0(HOME,"/20191203_top5kBySd_betaNormals_allInferredVsActual.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 plot( density( apply(temp2[ff,],2,function(x) cor(x,rowMeans(beta_norm[ff,]))) ),pch=16,cex=2,cex.lab=1.6,cex.main=2
   ,main="Sample correlations to average 450K normal"
@@ -1016,7 +956,7 @@ abline(v=median(apply(temp1[ff,],2,function(x) cor(x,rowMeans(beta_norm[ff,]))))
 abline(v=median(apply(temp2[ff,],2,function(x) cor(x,rowMeans(beta_norm[ff,])))),lwd=3,col=1,lty=2)
 
 (sf<-median(apply(temp2[ff,],2,function(x) cor(x,rowMeans(beta_norm[ff,])))))
-#[1] 0.5933028
+#[1] 0.6661728
 text(-.2,3.5,paste0("median r=",round(sf,2)),cex=1.6)
 legend("topleft",legend=c("tumor","inferred normal"),col=c("grey",1),lwd=3,bty="n",cex=1.6)
 
@@ -1035,26 +975,36 @@ rm(sf)
 N<-100
 resMat<-matrix(ncol=3,nrow=N,dimnames=list(1:N,c("p.raw","p.adj","p.dic")))
 
+# ##generate 500 random CpG sets
+# set.seed(20191214)
+# varF<-apply(betaData[,samples_use],1,sd)
+# varF<-varF > quantile(varF,.5)
+# p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
+
 ##generate 500 random CpG sets
-set.seed(20191214)
-varF<-apply(betaData,1,sd)
-varF<-varF > quantile(varF,.5)
+set.seed(20200904)
+varF<-apply(betaData[,samples_use],1,sd)
+varF<-varF >= quantile(varF,0)
 p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
+
+fracTum2<-fracTum[match(samples_use,colnames(betaData))]
 
 for (i in 1:N) {
   cat(i," of ",N,"\n")
   ##betaData filtered for chrX/Y
-  b<-apply(betaData[p_list[[i]],samples_use],1,doLmTests)
+  b<-apply(betaData[p_list[[i]],samples_use],1,function(x) {
+    adjustBeta(methylation=x,purity=fracTum2,snames=samples_use,nmax=3,nrep=3)
+  })
   ##adjusted
-  b1<-do.call("rbind",lapply(b,function(x) x$methCalTum))
+  b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
   b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
   b1<-cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2)
   ##unadjusted
-  b2<-do.call("rbind",lapply(b,function(x) x$methTum))
+  b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
   b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
   b2<-cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2)
   ##dichotomized
-  b3<-do.call("rbind",lapply(b,function(x) x$methTum>.3))
+  b3<-do.call("rbind",lapply(b,function(x) x$y.orig>.3))
   b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
   b3<-cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2)
 
@@ -1064,11 +1014,11 @@ for (i in 1:N) {
 }
 rm(b,b1,b2,b3,i,N)
 
-save(p_list,file="calibrateBetasPaper/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData")
+save(p_list,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 rm(p_list)
 
 
-pdf("calibrateBetasPaper/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets.pdf",width=8,height=8,useDingbats=F)
+pdf(paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 
 plot(density(resMat[,2]),xlim=c(-5,max(resMat)+c(5)),pch=16,cex=2,cex.lab=1.6,cex.main=2
@@ -1092,7 +1042,7 @@ axis(1,lwd=2,las=1,cex.axis=1.6)
 axis(2,lwd=2,las=1,cex.axis=1.6)
 dev.off()
 
-save(resMat,file="calibrateBetasPaper/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData")
+save(resMat,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData")
 rm(resMat)
 
 rm(varF)
