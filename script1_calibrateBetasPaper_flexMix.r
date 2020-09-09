@@ -1058,23 +1058,26 @@ rm(varF)
 
 ##choose one of the random iters
   ##best change pre-post?!
-load(file="calibrateBetasPaper/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData")
+load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
 
-load(file="calibrateBetasPaper/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData")
+load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 
 iii<-which.max( resMat[,2]-resMat[,1] )
 iii<-p_list[[iii]]
 
-b<-apply(betaData[iii,samples_use],1,doLmTests)
-
+set.seed(20200904)
+b<-apply(betaData[iii,samples_use],1,function(x) {
+  adjustBeta(methylation=x,purity=fracTum2,snames=samples_use,nmax=3,nrep=3)
+})
+ 
 rm(resMat,iii,p_list)
 
 ##adjusted
-b1<-do.call("rbind",lapply(b,function(x) x$methCalTum))
-b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
+b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
+
 ##unadjusted
-b2<-do.call("rbind",lapply(b,function(x) x$methTum))
-b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
+b2<-do.call("rbind",lapply(b,function(x) x$y.norm))
+
 
 ##do clustering
 c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
@@ -1106,7 +1109,7 @@ my_colour = list(unadj500=c("a"="#E41A1C","b"="#377EB8"),
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff("calibrateBetasPaper/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b1,cluster_rows = r1,cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",fontsize=18,cutree_cols=2
@@ -1115,7 +1118,7 @@ pheatmap(b1,cluster_rows = r1,cluster_cols = c3
 )
 dev.off()
 
-tiff("calibrateBetasPaper/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b1,cluster_rows = r1,cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",fontsize=18,cutree_cols=2
@@ -1144,7 +1147,7 @@ sample_anno<-data.frame(unadj500=c1,
 rownames(sample_anno)<-samples_use
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-tiff("calibrateBetasPaper/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff",width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=2,fontsize=18
@@ -1166,9 +1169,9 @@ cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(b2) ),method="
   ),stringsAsFactors=F)
 
 table(cl$unadjusted,cl$adjusted)
-#      a   b
-#  1 136  36
-#  2  53  10
+  #     a   b
+  # 1 186  14
+  # 2   2  33
 
 cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
 cl$Var2<-factor(cl$Var2,levels=c("b","a"))
@@ -1209,23 +1212,23 @@ q<-ggplot(cl,
     axis.ticks.y=element_blank()
     )
 
-pdf("calibrateBetasPaper/20191203_random500_alluvial_pear_eucl_hClust_unadjBeta_to_adjBeta.pdf",width=12,height=12,useDingbats=F)
+pdf(paste0(HOME,"/20191203_random500_alluvial_pear_eucl_hClust_unadjBeta_to_adjBeta.pdf"),width=12,height=12,useDingbats=F)
 q
 dev.off()
 rm(q)
 
-a2<-image_read("calibrateBetasPaper/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff")
-a1<-image_read("calibrateBetasPaper/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff")
+a2<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
+a1<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
 
-a11<-image_read("calibrateBetasPaper/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff")
+a11<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
 
 a11<-image_crop(a11,"1000x6000+4300")
 
-tiff("calibrateBetasPaper/20191215_random500_heatmap_noAnno_white.tiff",width=.2*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
 par(mar=c(0,0,0,0))
 plot(1,type="n",axes=F,xlab="",ylab="")
 dev.off()
-a9<-image_read("calibrateBetasPaper/20191215_random500_heatmap_noAnno_white.tiff")
+a9<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"))
 
 out<-image_append(c(a9,
   a1,
@@ -1236,7 +1239,7 @@ out<-image_append(c(a9,
   ),stack = F)
 out<-image_scale(out,"6000x")
 
-image_write(out, path = "calibrateBetasPaper/20191215_random500_heatmap_noAnno_unadj_adj_combined.tiff", format = "tiff")
+image_write(out, path = paste0(HOME,"/20191215_random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
 
 rm(a1,a2,a9,a11,out)
 rm(c1,c2,c3,c4,c5,r1,b,b1,b2)
@@ -1248,7 +1251,7 @@ rm(cl)
 ################################################################################
 ###Crop previous double image for new plot
 
-a1<-image_read("calibrateBetasPaper/20191203_top5k_heatmap_noAnno_unadj_adj_combined.tiff")
+a1<-image_read(paste0(HOME,"/20191203_top5k_heatmap_noAnno_unadj_adj_combined.tiff"))
 
 a1
 ## A tibble: 1 x 7
@@ -1260,7 +1263,7 @@ ww<- c(image_info(a1)$width , ceiling( image_info(a1)$height / 2 ))
 
 a1<-image_crop(a1,paste0(ww,collapse="x"))
 
-image_write(a1, path = "calibrateBetasPaper/20191215_random500_heatmap_noAnno_unadj_adj_combinedTopCropped.tiff", format = "tiff")
+image_write(a1, path = paste0(HOME,"/20191215_random500_heatmap_noAnno_unadj_adj_combinedTopCropped.tiff"), format = "tiff")
 
 rm(a1,ww)
 
@@ -1271,11 +1274,11 @@ gc()
 
 ##choose one promoter for doing figure with pre-post correction results
 
-iii<-intersect(atacObjects$atacMethProbes,names(gg))
-ii<-match(iii,names(gg) )
+iii<-intersect(atacObjects$atacMethProbes,names(res))
+ii<-match(iii,names(res) )
 ij<-match(iii,atacObjects$atacMethProbes )
 
-all(iii==names(gg)[ii])
+all(iii==names(res)[ii])
 #[1] TRUE
 all(iii==atacObjects$atacMethProbes[ij])
 ij<-names(atacObjects$atacMethProbes)[ij]
@@ -1285,17 +1288,20 @@ ij<-names(atacObjects$atacMethProbes)[ij]
 
 #system.time( gg2<-apply(testDat[iii,],1,doLmTests) )
     
-pdf("calibrateBetasPaper/20191211_top5kBySd_allCpGsInAtacPromoters.pdf",width=8,height=8,useDingbats=F)
+pdf(paste0(HOME,"/20191211_top5kBySd_allCpGsInAtacPromoters.pdf"),width=8,height=8,useDingbats=F)
 par(mfrow=c(2,2),font=2,font.axis=2,font.lab=2,font.sub=2)
 
 for(i in 1:length(iii)) {
 
-  plot(fracTum,gg[[iii[i]]]$methTum,col=gg[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="raw beta",axes=F,
-  main=names(gg)[ii][i],sub=ij[i]
+  plot(fracTum,betaData[iii[i],],col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="raw beta",axes=F,
+  main=names(res)[ii][i],sub=ij[i]
   )
+  # plot(fracTum,res[[iii[i]]]$y.orig,col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="raw beta",axes=F,
+  # main=names(res)[ii][i],sub=ij[i]
+  # )
   axis(1,lwd=2,las=1,at=seq(-.4,1,by=.2),cex.axis=1.6)
   axis(2,lwd=2,las=1,cex.axis=1.6)
-  plot(fracTum,gg[[iii[i]]]$methCalTum,col=gg[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="adj beta",axes=F,
+  plot(fracTum,res[[iii[i]]]$y.tum,col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="adj beta",axes=F,
     main=iii[i]
   )
   axis(1,lwd=2,las=1,at=seq(-.4,1,by=.2),cex.axis=1.6)
