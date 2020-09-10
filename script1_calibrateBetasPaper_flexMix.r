@@ -43,9 +43,9 @@ if(!requireNamespace("magick", quietly = TRUE)) {
   install.packages("magick") }
 library(magick)
 
-if(!requireNamespace("ggalluvial", quietly = TRUE)) {
-  install.packages("ggalluvial") }
-library(ggalluvial)
+if(!requireNamespace("resalluvial", quietly = TRUE)) {
+  install.packages("resalluvial") }
+library(resalluvial)
 
 if(!requireNamespace("flexmix", quietly = TRUE)) {
   install.packages("flexmix") }
@@ -91,11 +91,14 @@ str(sampleSets)
 all.equal(sampleSets$samplesMeth,colnames(betaNew))
 #[1] TRUE
 
+all.equal(sampleSets$samplesAll,samples_use)
+#[1] TRUE
+
 ##get ascat tumor
-fracA<-clinAnno[sampleSets$samplesMeth,"ASCAT_TUM_FRAC"]
+fracA<-clinAnno[sampleSets$samplesAll,"ASCAT_TUM_FRAC"]
 
 ##get battenberg tumor
-fracB<-clinAnno[sampleSets$samplesMeth,"BATTENBERG_TUMOUR_FRAC"]
+fracB<-clinAnno[sampleSets$samplesAll,"BATTENBERG_TUMOUR_FRAC"]
 
 quantile(fracA)
 #  0%  25%  50%  75% 100%
@@ -105,9 +108,9 @@ quantile(fracB)
 #0.1134026 0.3628369 0.5144925 0.6699751 0.9270524
 
 cor(fracA,fracB)
-#[1] 0.9085619
+#[1] 0.9086183
 cor(fracA,fracB,method="spe")
-#[1] 0.9150325
+#[1] 0.9151116
 
 fracTum<-round((fracA+fracB)/2,3)
 rm(fracA,fracB)
@@ -116,7 +119,10 @@ rm(fracA,fracB)
 ###get test data
 
 ##filter X and get top5k
-betaData<-betaNew
+betaData<-betaNew[,samples_use]
+
+all.equal(sampleSets$samplesAll,colnames(betaData))
+#[1] TRUE
 
 table(as.character(seqnames(probeAnno[(rownames(betaData))])))
 # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20
@@ -158,10 +164,10 @@ set.seed(20191203)
 testDat2<-betaData[varF,]
 
 str(testDat2)
-# num [1:5000, 1:236] 0.008 0.044 0.163 0.705 0.65 0.067 0.057 0.704 0.06 0 ...
-# - attr(*, "dimnames")=List of 2
-#  ..$ : chr [1:5000] "cg06712559" "cg17928920" "cg09248054" "cg27541454" ...
-#  ..$ : chr [1:236] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
+ # num [1:5000, 1:235] 0.008 0.044 0.163 0.705 0.65 0.067 0.057 0.704 0.06 0 ...
+ # - attr(*, "dimnames")=List of 2
+ #  ..$ : chr [1:5000] "cg06712559" "cg17928920" "cg09248054" "cg27541454" ...
+ #  ..$ : chr [1:235] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
 
 ################################################################################
 ###define function and output
@@ -248,7 +254,7 @@ proc.time()-ptm
 ##
 table(unlist(lapply(res,function(x) x$n.groups)))
    # 1    2    3 
-   # 1  777 4222 
+   # 1  792 4207 
 
 ##testplots
 #plot(unlist(lapply(res,function(x) x$model.intercepts)),unlist(lapply(res,function(x) x$model.slopes)),pch=16,cex=.3)
@@ -597,6 +603,7 @@ ff<-ff[ff2]
 
 plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
 
+##will change slightly if rerun - not deterministic..
 cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
 #[1] 0.760453
 (cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
@@ -651,16 +658,17 @@ rm(correctionTop5000,dataTop5000,dataAdjTop5000)
 ################################################################################
 ### Do comparative plots
 
-testDat<-testDat2[,samples_use]
+##check stats
+testDat<-do.call("rbind",lapply(res,function(x) x$y.orig))
 
 ##alluvial of results
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
 unique(c1[hclust( as.dist( 1-cor(temp1) ),method="ward.D")$order])
-#[1] 5 4 2 3 1
+#[1] 5 4 2 1 3
 
 c1<-cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5)
 unique(c1[hclust( as.dist( 1-cor(testDat) ),method="ward.D")$order])
-#[1] 3 4 5 1 2
+#[1] 3 4 5 2 1
 
 cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5),
   adjusted=letters[1:5][cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)]
@@ -668,20 +676,20 @@ cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(testDat) ),met
 
 table(cl$unadjusted,cl$adjusted)
   #    a  b  c  d  e
-  # 1 29 27  6  0  0
-  # 2 38 21 20  2  0
+  # 1 15 42 23  0  0
+  # 2 33  1 38  4  0
   # 3  0  0  0  1 13
-  # 4  4  0  0 19  9
-  # 5 31  6  7  2  0
+  # 4  1  0  0 11 10
+  # 5 17  6 20  0  0
 
 cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
-cl$Var1<-factor(cl$Var1,levels=c("3","4","5","1","2"))
-cl$Var2<-factor(cl$Var2,levels=c("e","d","b","c","a"))
+cl$Var1<-factor(cl$Var1,levels=c("3","4","5","2","1"))
+cl$Var2<-factor(cl$Var2,levels=c("e","d","b","a","c"))
 
-(pal<-brewer.pal(5,"Set1")[c(5,4,2,3,1)])
+(pal<-brewer.pal(5,"Set1")[c(5,4,2,1,3)])
 #[1] "#4DAF4A" "#FF7F00" "#377EB8" "#984EA3" "#E41A1C"
 #names(pal)<-c("a","b","c","d","e")
-(pal2<-brewer.pal(5,"Set1")[c(3,4,5,1,2)])
+(pal2<-brewer.pal(5,"Set1")[c(3,4,5,2,1)])
 #[1] "#4DAF4A" "#984EA3" "#FF7F00" "#E41A1C" "#377EB8"
 
 pal<-rev(pal)
@@ -695,13 +703,13 @@ q<-ggplot(cl,
                 ) +
   guides(fill = FALSE) +
   geom_stratum(width = 1/20, reverse = TRUE,colour="black",fill=c(pal2,pal)) +     #colour=c(pal2,pal),fill=c(pal2,pal)
-  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","a","b")),(c("e","d","b","c","a")))
+  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","b","a")),(c("e","d","b","a","c")))
     ) +
   scale_x_continuous(breaks = 1:2, labels = c("unadjusted", "adjusted")) +
   scale_fill_manual(values=rev(pal2)) +
   #scale_fill_manual(values=rep("lightgrey",5)) +
   #coord_flip() +
-  #ggtitle("") +
+  #restitle("") +
   theme_bw() +
   theme(axis.line = element_blank(),
     panel.grid.major = element_blank(),
@@ -725,7 +733,8 @@ rm(q,cl)
 ################################################################################
 ###Adjusted clustering
 
-testDat<-testDat2[,samples_use]
+##check stats
+testDat<-do.call("rbind",lapply(res,function(x) x$y.orig))
 
 ##leave out dendrograms
 
@@ -867,8 +876,6 @@ dev.off()
 
 rm(sample_anno,my_colour,c1,c2,c3,c4,r1)
 
-dev.off()
-
 ################################################################################
 ###Combine all
 
@@ -987,7 +994,7 @@ varF<-apply(betaData[,samples_use],1,sd)
 varF<-varF >= quantile(varF,0)
 p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
 
-fracTum2<-fracTum[match(samples_use,colnames(betaData))]
+fracTum2<-fracTum[match(samples_use,colnames(betaData))] ##legacy code... still works
 
 for (i in 1:N) {
   cat(i," of ",N,"\n")
@@ -1183,7 +1190,7 @@ cl$Var1<-factor(cl$Var1,levels=c("2","1"))
 pal<-rev(pal)
 pal2<-rev(pal2)
 
-q<-ggplot(cl,
+q<-resplot(cl,
        aes(y = Freq,
            axis1 = Var1, axis2 = Var2,)) +
   geom_alluvium(aes(fill = Var1 ),alpha=.75,       #fill = Var1
@@ -1197,7 +1204,7 @@ q<-ggplot(cl,
   scale_fill_manual(values=rev(pal)) +
   #scale_fill_manual(values=rep("lightgrey",5)) +
   #coord_flip() +
-  #ggtitle("") +
+  #restitle("") +
   theme_bw() +
   theme(axis.line = element_blank(),
     panel.grid.major = element_blank(),
@@ -1284,21 +1291,21 @@ all(iii==atacObjects$atacMethProbes[ij])
 ij<-names(atacObjects$atacMethProbes)[ij]
 
 #source("../function_doLmTests_modified_2.r")
-#system.time( gg2<-apply(testDat2,1,doLmTests) )
+#system.time( res2<-apply(testDat2,1,doLmTests) )
 
-#system.time( gg2<-apply(testDat[iii,],1,doLmTests) )
+#system.time( res2<-apply(testDat[iii,],1,doLmTests) )
     
 pdf(paste0(HOME,"/20191211_top5kBySd_allCpGsInAtacPromoters.pdf"),width=8,height=8,useDingbats=F)
 par(mfrow=c(2,2),font=2,font.axis=2,font.lab=2,font.sub=2)
 
 for(i in 1:length(iii)) {
 
-  plot(fracTum,betaData[iii[i],],col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="raw beta",axes=F,
-  main=names(res)[ii][i],sub=ij[i]
-  )
-  # plot(fracTum,res[[iii[i]]]$y.orig,col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="raw beta",axes=F,
+  # plot(fracTum,betaData[iii[i],],col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="raw beta",axes=F,
   # main=names(res)[ii][i],sub=ij[i]
   # )
+  plot(fracTum,res[[iii[i]]]$y.orig,col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="raw beta",axes=F,
+  main=names(res)[ii][i],sub=ij[i]
+  )
   axis(1,lwd=2,las=1,at=seq(-.4,1,by=.2),cex.axis=1.6)
   axis(2,lwd=2,las=1,cex.axis=1.6)
   plot(fracTum,res[[iii[i]]]$y.tum,col=res[[iii[i]]]$groups,pch=16,xlab="mean tumor fraction",ylab="adj beta",axes=F,
@@ -1312,6 +1319,15 @@ dev.off()
 rm(i,ii,iii,ij)
 
 ################################################################################
+################################################################################
+################################################################################
+###HERE
+################################################################################
+################################################################################
+################################################################################
+
+
+################################################################################
 ###Pick one promoter as example..
 
 str(tnbcClass)
@@ -1320,17 +1336,17 @@ str(tnbcClass)
 # $ TNBCtype  : chr  "BL2" "BL1" "M" "IM" ...
 # $ PAM50_AIMS: chr  "Basal" "Basal" "Basal" "Basal" ...
 
-table(gg[["cg21237687"]]$groups,tnbcClass$TNBCtype)   
+table(res[["cg21237687"]]$groups,tnbcClass$TNBCtype)   
 #    BL1 BL2 IM LAR  M MSL NA UNS
 #  1  22  13 16   5 18   2  3  11
 #  2  24   9 30  25 23  12  7  15
    
-table(gg[["cg21237687"]]$groups,tnbcClass$PAM50_AIMS)   
+table(res[["cg21237687"]]$groups,tnbcClass$PAM50_AIMS)   
 #    Basal Her2 LumB Normal
 #  1    78    8    0      4
 #  2   104   23    1     17
 
-table(gg[["cg21237687"]]$groups,clinAnno[samples_use,"HRD.3"])   
+table(res[["cg21237687"]]$groups,clinAnno[samples_use,"HRD.3"])   
 #    [0.0,0.2) [0.2,0.7) [0.7,1.0]
 #  1        22         5        63
 #  2        61         8        76
@@ -1338,82 +1354,82 @@ table(gg[["cg21237687"]]$groups,clinAnno[samples_use,"HRD.3"])
 probeN<-"cg21237687"
 geneN<-"239|ALOX12"
 
-pdf("calibrateBetasPaper/20191216_atacPromoters_ALOX12_betaVsTumFrac_Concept.pdf",width=16,height=16,useDingbats=F)
+pdf(paste0(HOME,"/20191216_atacPromoters_ALOX12_betaVsTumFrac_Concept.pdf"),width=16,height=16,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=F)
 ##1
-plot(1-fracTum,gg[[probeN]]$methTum,col=1,xlim=0:1,ylim=0:1,
+plot(1-fracTum,res[[probeN]]$y.orig,col=1,xlim=0:1,ylim=0:1,
   pch=16,cex=1.2,cex.lab=1.6,cex.main=2,
   main="ALOX12 promoter methylation",
   xlab="1-tumor fraction",
   ylab="unadjusted beta",
   axes=F
 )
-points(1-fracTum,gg[[probeN]]$methTum,col=gg[[probeN]]$groups,pch=16,cex=1.1)
-abline(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==1]~(1-fracTum)[gg[[probeN]]$groups==1]),col=1,lwd=3)
-abline(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==2]~(1-fracTum)[gg[[probeN]]$groups==2]),col=2,lwd=3)
+points(1-fracTum,res[[probeN]]$y.orig,col=res[[probeN]]$groups,pch=16,cex=1.1)
+abline(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==1]~(1-fracTum)[res[[probeN]]$groups==1]),col=1,lwd=3)
+abline(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==2]~(1-fracTum)[res[[probeN]]$groups==2]),col=2,lwd=3)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 legend("topright",legend=c("pop1","pop2"),col=1:2,pch=16,bty="n",cex=1.6)
 text(.2,.25,
   paste0("pop 1 intercept=",
-  round(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==1]~(1-fracTum)[gg[[probeN]]$groups==1])$coeff[1],2)
+  round(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==1]~(1-fracTum)[res[[probeN]]$groups==1])$coeff[1],2)
   ),cex=1.6)
 text(.2,.65,
   paste0("pop 2 intercept=",
-  round(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==2]~(1-fracTum)[gg[[probeN]]$groups==2])$coeff[1],2)
+  round(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==2]~(1-fracTum)[res[[probeN]]$groups==2])$coeff[1],2)
   ),cex=1.6)
 
 ##2
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(1-fracTum,gg[[probeN]]$methCalTum,col=1,xlim=0:1,ylim=0:1,
+plot(1-fracTum,res[[probeN]]$y.tum,col=1,xlim=0:1,ylim=0:1,
   pch=16,cex=1.2,cex.lab=1.6,cex.main=2,
   main="Adjusted ALOX12 promoter methylation",
   xlab="1-tumor fraction",
   ylab="adjusted beta",
   axes=F
 )
-points(1-fracTum,gg[[probeN]]$methCalTum,col=gg[[probeN]]$groups,pch=16,cex=1.1)
-abline(lm(gg[[probeN]]$methCalTum[gg[[probeN]]$groups==1]~(1-fracTum)[gg[[probeN]]$groups==1]),col=1,lwd=3)
-abline(lm(gg[[probeN]]$methCalTum[gg[[probeN]]$groups==2]~(1-fracTum)[gg[[probeN]]$groups==2]),col=2,lwd=3)
+points(1-fracTum,res[[probeN]]$y.tum,col=res[[probeN]]$groups,pch=16,cex=1.1)
+abline(lm(res[[probeN]]$y.tum[res[[probeN]]$groups==1]~(1-fracTum)[res[[probeN]]$groups==1]),col=1,lwd=3)
+abline(lm(res[[probeN]]$y.tum[res[[probeN]]$groups==2]~(1-fracTum)[res[[probeN]]$groups==2]),col=2,lwd=3)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 
 ##3
 par(fig=c(0,.5,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(fracTum,gg[[probeN]]$methTum,col=1,xlim=0:1,ylim=0:1,
+plot(fracTum,res[[probeN]]$y.orig,col=1,xlim=0:1,ylim=0:1,
   pch=16,cex=1.2,cex.lab=1.6,cex.main=2,
   main="ALOX12 promoter methylation",
   xlab="tumor fraction",
   ylab="unadjusted beta",
   axes=F
 )
-points(fracTum,gg[[probeN]]$methTum,col=gg[[probeN]]$groups,pch=16,cex=1.1)
-abline(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==1]~(fracTum)[gg[[probeN]]$groups==1]),col=1,lwd=3)
-abline(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==2]~(fracTum)[gg[[probeN]]$groups==2]),col=2,lwd=3)
+points(fracTum,res[[probeN]]$y.orig,col=res[[probeN]]$groups,pch=16,cex=1.1)
+abline(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==1]~(fracTum)[res[[probeN]]$groups==1]),col=1,lwd=3)
+abline(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==2]~(fracTum)[res[[probeN]]$groups==2]),col=2,lwd=3)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 legend("topright",legend=c("pop1","pop2"),col=1:2,pch=16,bty="n",cex=1.6)
 text(.8,.3,
   paste0("pop 1 intercept=",
-  round(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==1]~(fracTum)[gg[[probeN]]$groups==1])$coeff[1],2)
+  round(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==1]~(fracTum)[res[[probeN]]$groups==1])$coeff[1],2)
   ),cex=1.6)
 text(.8,.65,
   paste0("pop 2 intercept=",
-  round(lm(gg[[probeN]]$methTum[gg[[probeN]]$groups==2]~(fracTum)[gg[[probeN]]$groups==2])$coeff[1],2)
+  round(lm(res[[probeN]]$y.orig[res[[probeN]]$groups==2]~(fracTum)[res[[probeN]]$groups==2])$coeff[1],2)
   ),cex=1.6)
 
 ##4
 par(fig=c(.5,1,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(fracTum,gg[[probeN]]$methCalNorm,col=1,xlim=0:1,ylim=0:1,
+plot(fracTum,res[[probeN]]$methCalNorm,col=1,xlim=0:1,ylim=0:1,
   pch=16,cex=1.2,cex.lab=1.6,cex.main=2,
   main="ALOX12 inferred normal methylation",
   xlab="tumor fraction",
   ylab="inferred normal beta",
   axes=F
 )
-points(fracTum,gg[[probeN]]$methCalNorm,col=gg[[probeN]]$groups,pch=16,cex=1.1)
-abline(lm(gg[[probeN]]$methCalNorm[gg[[probeN]]$groups==1]~(fracTum)[gg[[probeN]]$groups==1]),col=1,lwd=3)
-abline(lm(gg[[probeN]]$methCalNorm[gg[[probeN]]$groups==2]~(fracTum)[gg[[probeN]]$groups==2]),col=2,lwd=3)
+points(fracTum,res[[probeN]]$methCalNorm,col=res[[probeN]]$groups,pch=16,cex=1.1)
+abline(lm(res[[probeN]]$methCalNorm[res[[probeN]]$groups==1]~(fracTum)[res[[probeN]]$groups==1]),col=1,lwd=3)
+abline(lm(res[[probeN]]$methCalNorm[res[[probeN]]$groups==2]~(fracTum)[res[[probeN]]$groups==2]),col=2,lwd=3)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 
@@ -1424,59 +1440,59 @@ rm(geneN,probeN)
 ################################################################################
 ###Do brca1 promoter
 
-table(gg[["cg09441966"]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
+table(res[["cg09441966"]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
 #      0   1
 #  1 177   2
 #  2   1  55
 
-table(gg[["cg09441966"]]$methTum>.3,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
+table(res[["cg09441966"]]$y.orig>.3,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
 #          0   1
 #  FALSE 178   7
 #  TRUE    0  50
 
 i<-"cg09441966"
 
-pdf("calibrateBetasPaper/20191216_atacPromoters_BRCA1_betaVsTumFrac_adjNonAdj.pdf",width=10,height=10,useDingbats=F)
+pdf(paste0(HOME,"/20191216_atacPromoters_BRCA1_betaVsTumFrac_adjNonAdj.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=F)
 ##1
-plot(fracTum,gg[[i]]$methTum,col=1,xlim=0:1,ylim=0:1,
+plot(fracTum,res[[i]]$y.orig,col=1,xlim=0:1,ylim=0:1,
   pch=16,cex=1.2,
   main="BRCA1 methylation vs tumor fraction",
   xlab="tumor fraction",
   ylab="unadjusted beta",
   axes=F
 )
-points(fracTum,gg[[i]]$methTum,col=gg[[i]]$groups,pch=16,cex=1.1)
+points(fracTum,res[[i]]$y.orig,col=res[[i]]$groups,pch=16,cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 legend("topleft",legend=c("pop1","pop2"),col=1:2,pch=16,bty="n",cex=1.6)
-abline(lm(gg[[i]]$methTum[gg[[i]]$groups==1]~fracTum[gg[[i]]$groups==1]),col=1,lwd=3)
-abline(lm(gg[[i]]$methTum[gg[[i]]$groups==2]~fracTum[gg[[i]]$groups==2]),col=2,lwd=3)
+abline(lm(res[[i]]$y.orig[res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
+abline(lm(res[[i]]$y.orig[res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
 
 ##2
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(fracTum,gg[[i]]$methCalTum,col=1,xlim=0:1,ylim=0:1,
+plot(fracTum,res[[i]]$y.tum,col=1,xlim=0:1,ylim=0:1,
   pch=16,cex=1.2,
   main="BRCA1 methylation vs tumor fraction",
   xlab="tumor fraction",
   ylab="adjusted beta",
   axes=F
 )
-points(fracTum,gg[[i]]$methCalTum,col=gg[[i]]$groups,pch=16,cex=1.1)
+points(fracTum,res[[i]]$y.tum,col=res[[i]]$groups,pch=16,cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
-abline(lm(gg[[i]]$methCalTum[gg[[i]]$groups==1]~fracTum[gg[[i]]$groups==1]),col=1,lwd=3)
-abline(lm(gg[[i]]$methCalTum[gg[[i]]$groups==2]~fracTum[gg[[i]]$groups==2]),col=2,lwd=3)
+abline(lm(res[[i]]$y.tum[res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
+abline(lm(res[[i]]$y.tum[res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
 
 ##3
 par(fig=c(0,.5,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-bclass<-as.integer(factor(paste0(gg[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
-sum(diag(table(gg[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
+bclass<-as.integer(factor(paste0(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
+sum(diag(table(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
 #[1] 232
-length(gg[[i]]$groups)
+length(res[[i]]$groups)
 #[1] 235
 
-table(paste0(gg[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"]))
+table(paste0(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"]))
 # 10  11  20  21 
 #177   2   1  55 
 
@@ -1487,9 +1503,9 @@ plot(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100
   ylab="Clinical BRCA1 methylation percent",
   axes=F
 )
-abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][gg[[i]]$groups==1]~fracTum[gg[[i]]$groups==1]),col=1,lwd=3)
-abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][gg[[i]]$groups==2]~fracTum[gg[[i]]$groups==2]),col=2,lwd=3)
-points(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=gg[[i]]$groups,pch=c(16,17,17,16)[bclass],cex=1.1)
+abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
+abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
+points(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,17,17,16)[bclass],cex=1.1)
 points(fracTum[bclass==2],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==2],col=2,pch=c(17),cex=1.1)
 points(fracTum[bclass==3],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==3],col=2,pch=c(17),cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
@@ -1498,14 +1514,14 @@ legend("topleft",legend=c("concordant (N=232)","discordant (N=3)"),col=1,pch=c(1
 
 ##4
 par(fig=c(.5,1,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(gg[[i]]$methCalTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100),
+plot(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100),
   pch=c(16,17,17,16)[bclass],cex=1.2,
   main="Clinical BRCA1 methylation vs adjusted beta",
   xlab="adjusted beta",
   ylab="Clinical BRCA1 methylation percent",
   axes=F
 )
-points(gg[[i]]$methCalTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=gg[[i]]$groups,pch=c(16,17,17,16)[bclass],cex=1.1)
+points(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,17,17,16)[bclass],cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,100,20),cex=1.6)
 #legend("topleft",legend=c("concordant (N=232)","discordant (N=3)"),col=1,pch=c(16,17),bty="n",cex=1.6)
@@ -1534,12 +1550,12 @@ str(gexTpm)
 
 #geneCoords-object has coordinates
 
-length(gg)
+length(res)
 #[1] 5000
 
-p5000<-probeAnno[names(gg)]
+p5000<-probeAnno[names(res)]
  
-all(names(p5000)==names(gg))
+all(names(p5000)==names(res))
 #[1] TRUE
 
 pCoord<-promoters(geneCoords,upstream=1500,downstream=500)
@@ -1562,7 +1578,7 @@ table(unlist(lapply(split(subjectHits(ol5000),queryHits(ol5000)),length)))
 length(unlist(lapply(split(subjectHits(ol5000),queryHits(ol5000)),length)))
 #[1] 805
 
-allSD<-apply(do.call("rbind",lapply(gg,function(x) x$methTum)),1,sd)
+allSD<-apply(do.call("rbind",lapply(res,function(x) x$y.orig)),1,sd)
 allSD<-allSD[subjectHits(ol5000)]
 
 allSD<-unlist(lapply(split(allSD,queryHits(ol5000)),function(x) names(x)[which.max(x)]))
@@ -1576,8 +1592,8 @@ head(allSD)
 
 allCorrs<-matrix(nrow=length(allSD),ncol=3,dimnames=list(names(allSD),c("corr.raw","corr.adj","corrMePrePost")))
 
-d1<-do.call("rbind",lapply(gg,function(x) x$methTum))
-d2<-do.call("rbind",lapply(gg,function(x) x$methCalTum))
+d1<-do.call("rbind",lapply(res,function(x) x$y.orig))
+d2<-do.call("rbind",lapply(res,function(x) x$y.tum))
 
 for(i in rownames(allCorrs)) {
 
@@ -1588,7 +1604,7 @@ for(i in rownames(allCorrs)) {
 } ; rm(i,d1,d2)
 
 ##do plots of effects of correction
-pdf("calibrateBetasPaper/20191216_gexCorr_top5000_adjNonAdj.pdf",width=10,height=10,useDingbats=F)
+pdf(paste0(HOME,"/20191216_gexCorr_top5000_adjNonAdj.pdf"),width=10,height=10,useDingbats=F)
 
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 plot(density(allCorrs[,3]),col=1,xlim=0:1,
@@ -1617,7 +1633,7 @@ text(-1,.75,paste0("mean abs difference = ",round(mean(abs(diff(t(allCorrs[,1:2]
 ##add BRCA1 correction
 i<-"cg09441966"
 par(fig=c(0,.5,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(gg[[i]]$methTum,gexTpm["672|BRCA1",samples_use],col=gg[[i]]$groups,xlim=c(0,1),ylim=c(0,5),
+plot(res[[i]]$y.orig,gexTpm["672|BRCA1",samples_use],col=res[[i]]$groups,xlim=c(0,1),ylim=c(0,5),
   pch=16,cex=1.2,lwd=3,
   main="BRCA1 beta-gex correlation",
   xlab="unadjusted beta",
@@ -1625,13 +1641,13 @@ plot(gg[[i]]$methTum,gexTpm["672|BRCA1",samples_use],col=gg[[i]]$groups,xlim=c(0
   axes=F
 )
 legend("topright",legend=c("pop1","pop2"),col=1:2,bty="n",pch=16)
-abline(lm(gexTpm["672|BRCA1",samples_use]~gg[[i]]$methTum),lwd=3,lty=2)
+abline(lm(gexTpm["672|BRCA1",samples_use]~res[[i]]$y.orig),lwd=3,lty=2)
 axis(1,lwd=2,las=1,at=seq(0,1,.25),cex=1.2)
 axis(2,lwd=2,las=1,cex=1.2)
-text(.25,4.5,paste0("adj R2 = ",round(summary(lm(gexTpm["672|BRCA1",samples_use]~gg[[i]]$methTum))$adj.r.squared,3)),pos=4,cex=1.2)
+text(.25,4.5,paste0("adj R2 = ",round(summary(lm(gexTpm["672|BRCA1",samples_use]~res[[i]]$y.orig))$adj.r.squared,3)),pos=4,cex=1.2)
 
 par(fig=c(.5,1,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(gg[[i]]$methCalTum,gexTpm["672|BRCA1",samples_use],col=gg[[i]]$groups,xlim=c(0,1),ylim=c(0,5),
+plot(res[[i]]$y.tum,gexTpm["672|BRCA1",samples_use],col=res[[i]]$groups,xlim=c(0,1),ylim=c(0,5),
   pch=16,cex=1.2,lwd=3,
   main="BRCA1 beta-gex correlation",
   xlab="adjusted beta",
@@ -1639,10 +1655,10 @@ plot(gg[[i]]$methCalTum,gexTpm["672|BRCA1",samples_use],col=gg[[i]]$groups,xlim=
   axes=F
 )
 legend("topright",legend=c("pop1","pop2"),col=1:2,bty="n",pch=16)
-abline(lm(gexTpm["672|BRCA1",samples_use]~gg[[i]]$methCalTum),lwd=3,lty=2)
+abline(lm(gexTpm["672|BRCA1",samples_use]~res[[i]]$y.tum),lwd=3,lty=2)
 axis(1,lwd=2,las=1,at=seq(0,1,.25),cex=1.2)
 axis(2,lwd=2,las=1,cex=1.2)
-text(.25,4.5,paste0("adj R2 = ",round(summary(lm(gexTpm["672|BRCA1",samples_use]~gg[[i]]$methCalTum))$adj.r.squared,3)),pos=4,cex=1.2)
+text(.25,4.5,paste0("adj R2 = ",round(summary(lm(gexTpm["672|BRCA1",samples_use]~res[[i]]$y.tum))$adj.r.squared,3)),pos=4,cex=1.2)
 rm(i)
 dev.off()
 
@@ -1651,16 +1667,16 @@ rm(p5000,pCoord,ol5000)
 rownames(allCorrs)<-paste(rownames(allCorrs),allSD,sep="|")
 rm(allSD)
 
-save(allCorrs,file="calibrateBetasPaper/20200116_object_gexCorr_top5000_adjNonAdj.RData")
+save(allCorrs,file=paste0(HOME,"/20200116_object_gexCorr_top5000_adjNonAdj.RData"))
 
 ################################################################################
 ###redo plot for rand500 iterations
 
 ##track sens+spec+acc for all iter
 
-#load(file="calibrateBetasPaper/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData")
+#load(file=paste0(HOME,"/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData")
 
-load(file="calibrateBetasPaper/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData")
+load(file=paste0(HOME,"/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 
 resMat2<-matrix(nrow=length(p_list),ncol=9)
 colnames(resMat2)<-c("rawAcc","rawSens","rawSpec",
@@ -1675,7 +1691,7 @@ for( i in 1:length(p_list)) {
      b<-apply(betaData[p_list[[i]],samples_use],1,doLmTests)
 
      ##unadjusted
-     b1<-do.call("rbind",lapply(b,function(x) x$methTum))
+     b1<-do.call("rbind",lapply(b,function(x) x$y.orig))
      b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
      b1<-factor(cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2))
      r1<-confusionMatrix(b1,reference=refStat)
@@ -1684,7 +1700,7 @@ for( i in 1:length(p_list)) {
      r1<-r1[which.max(r1[,1]),]
      resMat2[i,1:3]<-as.numeric(r1)
      ##adjusted
-     b2<-do.call("rbind",lapply(b,function(x) x$methCalTum))
+     b2<-do.call("rbind",lapply(b,function(x) x$y.tum))
      b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
      b2<-factor(cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2))
      r1<-confusionMatrix(b2,reference=refStat)
@@ -1693,7 +1709,7 @@ for( i in 1:length(p_list)) {
      r1<-r1[which.max(r1[,1]),]
      resMat2[i,4:6]<-as.numeric(r1)
      ##dichotomized
-     b3<-do.call("rbind",lapply(b,function(x) x$methTum > .3))
+     b3<-do.call("rbind",lapply(b,function(x) x$y.orig > .3))
      b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
      b3<-factor(cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2))
      r1<-confusionMatrix(b3,reference=refStat)
@@ -1705,7 +1721,7 @@ for( i in 1:length(p_list)) {
      
 rm(i,p_list,b,b1,b2,b3,r1,refStat)
 
-pdf("calibrateBetasPaper/20200121_top50percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf",width=10,height=10,useDingbats=F)
+pdf(paste0(HOME,"/20200121_top50percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
 boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-.5,1),width=2,axes=F,lwd=2,
@@ -1856,11 +1872,11 @@ t.test(resMat2[,9]-resMat2[,3])
 # mean of x 
 #0.06622642 
 
-save(resMat2,file="calibrateBetasPaper/20200121_top50percentBySd_basalVsLuminalSplitIn100randomSets_resultsConfusionMatrix.RData")
+save(resMat2,file=paste0(HOME,"/20200121_top50percentBySd_basalVsLuminalSplitIn100randomSets_resultsConfusionMatrix.RData"))
 
 ################################################################################
 
-save.image("20200121_tempSave_calibrateBetasPaper.RData")
+save.image(paste0(HOME,"/20200121_tempSave_calibrateBetasPaper.RData"))
 #"C:/Users/Mattias/Desktop/js_breast"
 
 #load("C:/Users/Mattias/Desktop/js_breast/20200121_tempSave_calibrateBetasPaper.RData")
