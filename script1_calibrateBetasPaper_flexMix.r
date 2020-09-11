@@ -1190,7 +1190,7 @@ cl$Var1<-factor(cl$Var1,levels=c("2","1"))
 pal<-rev(pal)
 pal2<-rev(pal2)
 
-q<-resplot(cl,
+q<-ggplot(cl,
        aes(y = Freq,
            axis1 = Var1, axis2 = Var2,)) +
   geom_alluvium(aes(fill = Var1 ),alpha=.75,       #fill = Var1
@@ -1319,15 +1319,6 @@ dev.off()
 rm(i,ii,iii,ij)
 
 ################################################################################
-################################################################################
-################################################################################
-###HERE
-################################################################################
-################################################################################
-################################################################################
-
-
-################################################################################
 ###Pick one promoter as example..
 
 str(tnbcClass)
@@ -1420,16 +1411,16 @@ text(.8,.65,
 
 ##4
 par(fig=c(.5,1,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
-plot(fracTum,res[[probeN]]$methCalNorm,col=1,xlim=0:1,ylim=0:1,
+plot(fracTum,res[[probeN]]$y.norm,col=1,xlim=0:1,ylim=0:1,
   pch=16,cex=1.2,cex.lab=1.6,cex.main=2,
   main="ALOX12 inferred normal methylation",
   xlab="tumor fraction",
   ylab="inferred normal beta",
   axes=F
 )
-points(fracTum,res[[probeN]]$methCalNorm,col=res[[probeN]]$groups,pch=16,cex=1.1)
-abline(lm(res[[probeN]]$methCalNorm[res[[probeN]]$groups==1]~(fracTum)[res[[probeN]]$groups==1]),col=1,lwd=3)
-abline(lm(res[[probeN]]$methCalNorm[res[[probeN]]$groups==2]~(fracTum)[res[[probeN]]$groups==2]),col=2,lwd=3)
+points(fracTum,res[[probeN]]$y.norm,col=res[[probeN]]$groups,pch=16,cex=1.1)
+abline(lm(res[[probeN]]$y.norm[res[[probeN]]$groups==1]~(fracTum)[res[[probeN]]$groups==1]),col=1,lwd=3)
+abline(lm(res[[probeN]]$y.norm[res[[probeN]]$groups==2]~(fracTum)[res[[probeN]]$groups==2]),col=2,lwd=3)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex.axis=1.6)
 
@@ -1441,6 +1432,11 @@ rm(geneN,probeN)
 ###Do brca1 promoter
 
 table(res[["cg09441966"]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
+  #     0   1
+  # 1 155   0
+  # 2  21   0
+  # 3   2  57
+
 #      0   1
 #  1 177   2
 #  2   1  55
@@ -1455,19 +1451,21 @@ i<-"cg09441966"
 pdf(paste0(HOME,"/20191216_atacPromoters_BRCA1_betaVsTumFrac_adjNonAdj.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=F)
 ##1
+bclass<-as.integer(factor(paste0(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
 plot(fracTum,res[[i]]$y.orig,col=1,xlim=0:1,ylim=0:1,
-  pch=16,cex=1.2,
+  pch=c(16,16,16,17)[bclass],cex=1.2,
   main="BRCA1 methylation vs tumor fraction",
   xlab="tumor fraction",
   ylab="unadjusted beta",
   axes=F
 )
-points(fracTum,res[[i]]$y.orig,col=res[[i]]$groups,pch=16,cex=1.1)
-axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
-axis(2,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
-legend("topleft",legend=c("pop1","pop2"),col=1:2,pch=16,bty="n",cex=1.6)
+points(fracTum,res[[i]]$y.orig,col=res[[i]]$groups,pch=c(16,16,16,17)[bclass],cex=1.1)
+axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.5)
+axis(2,lwd=2,las=1,at=seq(0,1,.2),cex=1.5)
+legend("topleft",legend=c("pyro unmeth","pyro meth"),col=1,pch=c(16,17),bty="n",cex=1.6)
 abline(lm(res[[i]]$y.orig[res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
 abline(lm(res[[i]]$y.orig[res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
+abline(lm(res[[i]]$y.orig[res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
 
 ##2
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
@@ -1483,52 +1481,64 @@ axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 abline(lm(res[[i]]$y.tum[res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
 abline(lm(res[[i]]$y.tum[res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
+abline(lm(res[[i]]$y.tum[res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
 
 ##3
 par(fig=c(0,.5,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
 bclass<-as.integer(factor(paste0(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
-sum(diag(table(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
-#[1] 232
 length(res[[i]]$groups)
 #[1] 235
 
+table(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
+  #     0   1
+  # 1 155   0
+  # 2  21   0
+  # 3   2  57
+
 table(paste0(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"]))
-# 10  11  20  21 
-#177   2   1  55 
+#  10  20  30  31 
+# 155  21   2  57 
 
 plot(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100),
-  pch=c(16,17,17,16)[bclass],cex=1.2,
-  main="Clinical BRCA1 methylation vs tumor fraction",
+  pch=c(16,16,17,16)[bclass],cex=1.2,
+  main="Pyorsequencing BRCA1 methylation vs tumor fraction",
   xlab="tumor fraction",
-  ylab="Clinical BRCA1 methylation percent",
+  ylab="Pyro BRCA1 methylation percent",
   axes=F
 )
-abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
-abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
-points(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,17,17,16)[bclass],cex=1.1)
-points(fracTum[bclass==2],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==2],col=2,pch=c(17),cex=1.1)
-points(fracTum[bclass==3],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==3],col=2,pch=c(17),cex=1.1)
+#abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
+#abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
+#abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
+points(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,16,17,16)[bclass],cex=1.1)
+points(fracTum[bclass==1],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==1],col=1,pch=c(16),cex=1.1)
+points(fracTum[bclass==2],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==2],col=1,pch=c(16),cex=1.1)
+points(fracTum[bclass==3],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==3],col=3,pch=c(17),cex=1.1)
+points(fracTum[bclass==4],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==4],col=3,pch=c(16),cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,100,20),cex=1.6)
-legend("topleft",legend=c("concordant (N=232)","discordant (N=3)"),col=1,pch=c(16,17),bty="n",cex=1.6)
+legend("topleft",legend=c("pyro meth","pyro unmeth","discordant"),col=c(3,1,3),pch=c(16,16,17),bty="n",cex=1.5)
+abline(h=7,lwd=3,lty=2,col="lightgrey")
 
 ##4
 par(fig=c(.5,1,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
 plot(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100),
   pch=c(16,17,17,16)[bclass],cex=1.2,
-  main="Clinical BRCA1 methylation vs adjusted beta",
+  main="Pyro BRCA1 methylation vs adjusted beta",
   xlab="adjusted beta",
-  ylab="Clinical BRCA1 methylation percent",
+  ylab="Pyro BRCA1 methylation percent",
   axes=F
 )
-points(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,17,17,16)[bclass],cex=1.1)
+points(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,16,16,17)[bclass],cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,100,20),cex=1.6)
-#legend("topleft",legend=c("concordant (N=232)","discordant (N=3)"),col=1,pch=c(16,17),bty="n",cex=1.6)
+legend("topleft",legend=c("concordant (N=233)","discordant (N=2)"),col=1,pch=c(16,17),bty="n",cex=1.5)
 rm(bclass)
 
 dev.off()
 rm(i)
+
+############### HERE!!! ####################
+
 
 ################################################################################
 ###Correlation to GEX pre/post correction
