@@ -43,9 +43,9 @@ if(!requireNamespace("magick", quietly = TRUE)) {
   install.packages("magick") }
 library(magick)
 
-if(!requireNamespace("resalluvial", quietly = TRUE)) {
-  install.packages("resalluvial") }
-library(resalluvial)
+if(!requireNamespace("ggalluvial", quietly = TRUE)) {
+  install.packages("ggalluvial") }
+library(ggalluvial)
 
 if(!requireNamespace("flexmix", quietly = TRUE)) {
   install.packages("flexmix") }
