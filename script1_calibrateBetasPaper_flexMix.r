@@ -51,6 +51,10 @@ if(!requireNamespace("flexmix", quietly = TRUE)) {
   install.packages("flexmix") }
 library("flexmix")
 
+if(!requireNamespace("caret", quietly = TRUE)) {
+  install.packages("caret") }
+library("caret")
+
 ################################################################################
 ##load data
 
@@ -1729,6 +1733,7 @@ for( i in 1:length(p_list)) {
 rm(i,p_list,b,b1,b2,b3,r1,refStat)
 
 ###HERE!!!
+
 
 pdf(paste0(HOME,"/20200121_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
