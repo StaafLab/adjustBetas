@@ -1537,9 +1537,6 @@ rm(bclass)
 dev.off()
 rm(i)
 
-############### HERE!!! ####################
-
-
 ################################################################################
 ###Correlation to GEX pre/post correction
 
@@ -1684,9 +1681,7 @@ save(allCorrs,file=paste0(HOME,"/20200116_object_gexCorr_top5000_adjNonAdj.RData
 
 ##track sens+spec+acc for all iter
 
-#load(file=paste0(HOME,"/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData")
-
-load(file=paste0(HOME,"/20191214_top50percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
+load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 
 resMat2<-matrix(nrow=length(p_list),ncol=9)
 colnames(resMat2)<-c("rawAcc","rawSens","rawSpec",
@@ -1698,7 +1693,9 @@ for( i in 1:length(p_list)) {
      cat(".")
      if(i%%10==0)  cat(" ",i,"\n")
      
-     b<-apply(betaData[p_list[[i]],samples_use],1,doLmTests)
+    b<-apply(betaData[p_list[[i]],samples_use],1,function(x) {
+      adjustBeta(methylation=x,purity=fracTum2,snames=samples_use,nmax=3,nrep=3)
+    })
 
      ##unadjusted
      b1<-do.call("rbind",lapply(b,function(x) x$y.orig))
@@ -1731,7 +1728,9 @@ for( i in 1:length(p_list)) {
      
 rm(i,p_list,b,b1,b2,b3,r1,refStat)
 
-pdf(paste0(HOME,"/20200121_top50percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
+###HERE!!!
+
+pdf(paste0(HOME,"/20200121_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
 boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-.5,1),width=2,axes=F,lwd=2,
