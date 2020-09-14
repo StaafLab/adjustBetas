@@ -1732,12 +1732,10 @@ for( i in 1:length(p_list)) {
      
 rm(i,p_list,b,b1,b2,b3,r1,refStat)
 
-###HERE!!!
-
 pdf(paste0(HOME,"/20200121_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
-boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-.5,1),width=2,axes=F,lwd=2,
+boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
   main="Discrimination of PAM50 Basal vs Luminal split"
 )
 abline(h=0,lwd=3,col="lightgrey",lty=2)
@@ -1757,16 +1755,16 @@ axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
   "Adjusted",
   "Beta>0.3")
 )
-axis(2,lwd=2,las=1,cex=1.2)
+axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
 mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.75,.75),lwd=3)
-text(1.5,.75,labels="Accuracy",pos=3)
+lines(x=c(1,2),y=c(.85,.85),lwd=3)
+text(1.5,.85,labels="Accuracy",pos=3)
 
-lines(x=c(4,5),y=c(.75,.75),lwd=3)
-text(4.5,.75,labels="Sensitivity",pos=3)
+lines(x=c(4,5),y=c(.85,.85),lwd=3)
+text(4.5,.85,labels="Sensitivity",pos=3)
 
-lines(x=c(7,8),y=c(.75,.75),lwd=3)
-text(7.5,.75,labels="Specificity",pos=3)
+lines(x=c(7,8),y=c(.85,.85),lwd=3)
+text(7.5,.85,labels="Specificity",pos=3)
 
 ##absolute terms
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
@@ -1791,110 +1789,115 @@ axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
   "Adjusted",
   "Beta>0.3")
 )
-axis(2,lwd=2,las=1,cex=1.2)
+axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
 mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.15,.15),lwd=3)
-text(1.5,.15,labels="Accuracy",pos=3)
+lines(x=c(1,2),y=c(.05,.05),lwd=3)
+text(1.5,.05,labels="Accuracy",pos=3)
 
-lines(x=c(4,5),y=c(.15,.15),lwd=3)
-text(4.5,.15,labels="Sensitivity",pos=3)
+lines(x=c(4,5),y=c(.05,.05),lwd=3)
+text(4.5,.05,labels="Sensitivity",pos=3)
 
-lines(x=c(7,8),y=c(.15,.15),lwd=3)
-text(7.5,.15,labels="Specificity",pos=3)
+lines(x=c(7,8),y=c(.05,.05),lwd=3)
+text(7.5,.05,labels="Specificity",pos=3)
 
 dev.off()
 
 ##deltas - adj.
 t.test(resMat2[,4]-resMat2[,1])
-#
-#        One Sample t-test
-#
-#data:  resMat2[, 4] - resMat2[, 1]
-#t = 32.522, df = 99, p-value < 2.2e-16
-#alternative hypothesis: true mean is not equal to 0
-#95 percent confidence interval:
-# 0.2660735 0.3006499
-#sample estimates:
-#mean of x 
-#0.2833617 
+#         One Sample t-test
+
+# data:  resMat2[, 4] - resMat2[, 1]
+# t = 26.228, df = 99, p-value < 2.2e-16
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  0.2288446 0.2663043
+# sample estimates:
+# mean of x 
+# 0.2475745 
 
 t.test(resMat2[,5]-resMat2[,2])
-#
-#        One Sample t-test
-#
-#data:  resMat2[, 5] - resMat2[, 2]
-#t = 22.724, df = 99, p-value < 2.2e-16
-#alternative hypothesis: true mean is not equal to 0
-#95 percent confidence interval:
-# 0.2559522 0.3049269
-#sample estimates:
-#mean of x 
-#0.2804396 
+#         One Sample t-test
+
+# data:  resMat2[, 5] - resMat2[, 2]
+# t = 19.014, df = 99, p-value < 2.2e-16
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  0.2456137 0.3028478
+# sample estimates:
+# mean of x 
+# 0.2742308 
 
 t.test(resMat2[,6]-resMat2[,3])
-#
-#        One Sample t-test
-#
-#data:  resMat2[, 6] - resMat2[, 3]
-#t = 13.185, df = 99, p-value < 2.2e-16
-#alternative hypothesis: true mean is not equal to 0
-#95 percent confidence interval:
-# 0.2492418 0.3375507
-#sample estimates:
-#mean of x 
-#0.2933962 
+#         One Sample t-test
+
+# data:  resMat2[, 6] - resMat2[, 3]
+# t = 6.1483, df = 99, p-value = 1.656e-08
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  0.1056802 0.2063952
+# sample estimates:
+# mean of x 
+# 0.1560377 
 
 
 ##deltas - beta>.3
 t.test(resMat2[,7]-resMat2[,1])
-#
-#        One Sample t-test
-#
-#data:  resMat2[, 7] - resMat2[, 1]
-#t = -4.2221, df = 99, p-value = 5.379e-05
-#alternative hypothesis: true mean is not equal to 0
-#95 percent confidence interval:
-# -0.06380248 -0.02300603
-#sample estimates:
-#  mean of x 
-#-0.04340426 
+#         One Sample t-test
+
+# data:  resMat2[, 7] - resMat2[, 1]
+# t = -6.0616, df = 99, p-value = 2.456e-08
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  -0.08873422 -0.04496791
+# sample estimates:
+#   mean of x 
+# -0.06685106 
 
 t.test(resMat2[,8]-resMat2[,2])
-#
-#        One Sample t-test
-#
-#data:  resMat2[, 8] - resMat2[, 2]
-#t = -5.2738, df = 99, p-value = 7.865e-07
-#alternative hypothesis: true mean is not equal to 0
-#95 percent confidence interval:
-# -0.1036719 -0.0469874
-#sample estimates:
+#         One Sample t-test
+
+# data:  resMat2[, 8] - resMat2[, 2]
+# t = -3.7132, df = 99, p-value = 0.0003386
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  -0.10403372 -0.03157067
+# sample estimates:
 #  mean of x 
-#-0.07532967 
+# -0.0678022 
 
 t.test(resMat2[,9]-resMat2[,3])
-#
-#        One Sample t-test
-#
-#data:  resMat2[, 9] - resMat2[, 3]
-#t = 2.4743, df = 99, p-value = 0.01505
-#alternative hypothesis: true mean is not equal to 0
-#95 percent confidence interval:
-# 0.01311683 0.11933600
-#sample estimates:
-# mean of x 
-#0.06622642 
+#         One Sample t-test
+
+# data:  resMat2[, 9] - resMat2[, 3]
+# t = -1.5116, df = 99, p-value = 0.1338
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  -0.14705277  0.01988296
+# sample estimates:
+#   mean of x 
+# -0.06358491 
 
 save(resMat2,file=paste0(HOME,"/20200121_top50percentBySd_basalVsLuminalSplitIn100randomSets_resultsConfusionMatrix.RData"))
 
 ################################################################################
+##Temp save
 
 save.image(paste0(HOME,"/20200121_tempSave_calibrateBetasPaper.RData"))
-#"C:/Users/Mattias/Desktop/js_breast"
 
-#load("C:/Users/Mattias/Desktop/js_breast/20200121_tempSave_calibrateBetasPaper.RData")
+#load(paste0(HOME,"/20200121_tempSave_calibrateBetasPaper.RData"))
+
+################################################################################
+##Show additional examples of beta correciton for fig1
 
 
+
+################################################################################
+##Show wether CN-status influences presence of 3 groups
+
+
+
+################################################################################
+##Show how IM-group dissolves in corrected data
 
 
 
