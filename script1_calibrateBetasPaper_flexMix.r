@@ -1882,6 +1882,9 @@ save(resMat2,file=paste0(HOME,"/20200121_top50percentBySd_basalVsLuminalSplitIn1
 ################################################################################
 ##Temp save
 
+
+#HOME<-"I:/data/adjustBetas"
+#GIT<-"F:/gitProjects/adjustBetas"
 save.image(paste0(HOME,"/20200121_tempSave_calibrateBetasPaper.RData"))
 
 #load(paste0(HOME,"/20200121_tempSave_calibrateBetasPaper.RData"))
