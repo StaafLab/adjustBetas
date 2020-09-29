@@ -29,31 +29,51 @@ if (!requireNamespace("BiocManager", quietly = TRUE)) {
  
 if(!requireNamespace("GenomicRanges", quietly = TRUE)) {
   BiocManager::install("GenomicRanges") }
+
 library(GenomicRanges)
 
 if(!requireNamespace("RColorBrewer", quietly = TRUE)) {
   install.packages("RColorBrewer") }
+
 library(RColorBrewer)
 
 if(!requireNamespace("pheatmap", quietly = TRUE)) {
   install.packages("pheatmap") }
+
 library(pheatmap)
 
 if(!requireNamespace("magick", quietly = TRUE)) {
   install.packages("magick") }
+
 library(magick)
 
 if(!requireNamespace("ggalluvial", quietly = TRUE)) {
   install.packages("ggalluvial") }
+
 library(ggalluvial)
 
 if(!requireNamespace("flexmix", quietly = TRUE)) {
   install.packages("flexmix") }
+
 library("flexmix")
 
 if(!requireNamespace("caret", quietly = TRUE)) {
   install.packages("caret") }
+
 library("caret")
+
+if(!requireNamespace("doParallel", quietly = TRUE)) {
+	install.packages("doParallel") }
+
+library(doParallel)
+
+if(!requireNamespace("parallel", quietly = TRUE)) {
+	install.packages("parallel") }
+
+library(parallel)
+
+##source - flexmix loaded on source
+source(paste0(GIT,"/function_correctBetas.r"))
 
 ################################################################################
 ##load data
@@ -63,7 +83,7 @@ load(paste0(HOME,"/data/","GSE67919_Annotations.RData"))
 load(paste0(HOME,"/data/","GSE67919_Beta.RData"))
 
 ls()
-#[1] "annotations" "beta"        "GIT"         "HOME"   
+#[1] "adjustBeta"  "annotations" "beta"        "GIT"         "HOME" 
 
 annotations_norm<-annotations
 beta_norm<-beta
@@ -72,12 +92,12 @@ rm(annotations,beta)
 load(paste0(HOME,"/data/","20191021_workspace_tcgaAtacBrca.RData"))
 
 ls()
-#  [1] "annotations_norm" "atacManifest"     "atacObjects"      "beta_norm"       
-#  [5] "betaNew"          "clinAnno"         "clusters.umap"    "geneCoords"      
-#  [9] "getProm"          "gexAnno"          "gexCoords"        "gexFpkm"         
-# [13] "gexTpm"           "GIT"              "HOME"             "makePromObject"  
-# [17] "nonCodingObjects" "probeAnno"        "sampleAnno"       "samples_use"     
-# [21] "sampleSets"       "stanfordIdToTcga" "tnbcClass"       
+#  [1] "adjustBeta"       "annotations_norm" "atacManifest"     "atacObjects"     
+#  [5] "beta_norm"        "betaNew"          "clinAnno"         "clusters.umap"   
+#  [9] "geneCoords"       "getProm"          "gexAnno"          "gexCoords"       
+# [13] "gexFpkm"          "gexTpm"           "GIT"              "HOME"            
+# [17] "makePromObject"   "nonCodingObjects" "probeAnno"        "sampleAnno"      
+# [21] "samples_use"      "sampleSets"       "stanfordIdToTcga" "tnbcClass"     
 
 ################################################################################
 ### Get tumor purity
@@ -174,98 +194,39 @@ str(testDat2)
  #  ..$ : chr [1:235] "PD31028a" "PD31029a" "PD31030a" "PD31031a" ...
 
 ################################################################################
-###define function and output
+###correct betas using multicore
 
-##define function with input = betas and purity estimate
-  ##output = line parameters for L1/L2/L3
-adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3) {
-  #define variables
-  x<-as.numeric(purity)
-  x2<-1-as.numeric(purity)
-  y<-as.numeric(methylation)
-  #calculate global corr
-  gl.corr<-suppressWarnings(cor(x,y))
-  gl.corr[is.na(gl.corr)]<-0
-  #add small gaussian noise to x - problem with large number of zero samples
-  y2<-y+rnorm(length(y),mean=0,sd=.005)  
-  #do modeling 
-  model <- stepFlexmix(y2 ~ x,k = 1:nmax, nrep = nrep,verbose = FALSE)
-  model <- getModel(model, "BIC")
-  #get clusters
-  cl<-clusters(model)
-  ##get line parameters for each pop - calculate from data - use original y
-  res.norm<-unlist(lapply(1:nmax,function(z) { 
-    if(z %in% cl) {
-      m<-lm(y[cl==z]~x[cl==z])
-      r<-coefficients(m)[1]+residuals(m)
-      names(r)<-snames[cl==z]
-      r
-    } else { NULL }
-  }))
-  res.norm<-res.norm[snames]
-  ##get line parameters for each pop - calculate from data - use original y
-  res.tum<-unlist(lapply(1:nmax,function(z) { 
-    if(z %in% cl) {
-      m<-lm(y[cl==z]~x2[cl==z])
-      r<-coefficients(m)[1]+residuals(m)
-      names(r)<-snames[cl==z]
-      r
-    } else { NULL }
-  }))
-  res.tum<-res.tum[snames]
+no_cores <- detectCores(logical = TRUE)
 
-  res.int<-round(as.numeric(unlist(lapply(slot(model,"components"),function(z) slot(z[[1]],"parameters")$coef[1]))),3)
-  res.slope<-round(as.numeric(unlist(lapply(slot(model,"components"),function(z) slot(z[[1]],"parameters")$coef[2]))),3)
+cat("using", no_cores-1,"cores","\n")
 
-  ##cap at 0 and 1
-  res.tum[res.tum > 1] <- 1
-  res.tum[res.tum < 0] <- 0
-  res.norm[res.norm > 1] <- 1
-  res.norm[res.norm < 0] <- 0
+cl <- makeCluster(no_cores-1)  
+registerDoParallel(cl)  
 
-  #round
-  res.tum<-round(res.tum,3)
-  res.norm<-round(res.norm,3)
-  res.orig<-round(methylation,3)
+##estimated runtime in hours given that 5000 rows is ~500 sec on 6 cores
 
-  ##return some stats
-  return( list(y.norm=res.norm,
-    y.tum=res.tum,
-    y.orig=res.orig,
-    groups=cl,
-    n.groups=length(levels(factor(cl))),
-    med.norm=median(res.norm),
-    glob.cor=gl.corr,
-    avg.betaDiff=mean(y-res.tum),
-    model.intercepts=res.int,
-    model.slopes=res.slope   
-    )
-  )
-}
+##home i7-6700K 4core/8thread
+( ( ((500*6)/(5000))*nrow(betaNew) ) / (no_cores-1) ) / 60^2
+#[1] 18.10488
 
-##do test set
-ptm<-proc.time()
+##work threadripper 16core/32thread
+( ( ((500*6)/(5000))*nrow(betaNew) ) / (32-1) ) / 60^2
+#[1] 4.088199
 
-set.seed(20200904)
-res<-apply(testDat2,1,function(x) {
-  adjustBeta(methylation=x,purity=fracTum,snames=colnames(testDat2),nmax=3,nrep=3)
+clusterEvalQ(cl, {
+  library("flexmix")
 })
 
-proc.time()-ptm
-#    user  system elapsed 
-# 2203.11   45.42 2251.81 
+#clusterExport(cl,list("adjustBeta","betaData","fracTum"))
 
-##
+clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+system.time(
+	res<-parRapply(cl = cl, testDat2, adjustBeta,purity=fracTum,snames=colnames(testDat2))
+)
+
 table(unlist(lapply(res,function(x) x$n.groups)))
-   # 1    2    3 
-   # 1  792 4207 
 
-##testplots
-#plot(unlist(lapply(res,function(x) x$model.intercepts)),unlist(lapply(res,function(x) x$model.slopes)),pch=16,cex=.3)
-
-#hist(unlist(lapply(res,function(x) x$model.intercepts)),breaks=51)
-
-#plot(unlist(lapply(res,function(x) abs(x$glob.cor))),unlist(lapply(res,function(x) abs(x$avg.betaDiff))))
+#save(res,file=paste0(HOME,"/2020918_object_adjustedBetas.RData"))
 
 ################################################################################
 ###gather adjusted data and calculate new data from it..
