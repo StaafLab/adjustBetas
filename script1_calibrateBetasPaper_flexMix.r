@@ -203,15 +203,7 @@ cat("using", no_cores-1,"cores","\n")
 cl <- makeCluster(no_cores-1)  
 registerDoParallel(cl)  
 
-##estimated runtime in hours given that 5000 rows is ~500 sec on 6 cores
-
-##home i7-6700K 4core/8thread
-( ( ((500*6)/(5000))*nrow(betaNew) ) / (no_cores-1) ) / 60^2
-#[1] 18.10488
-
-##work threadripper 16core/32thread
-( ( ((500*6)/(5000))*nrow(betaNew) ) / (32-1) ) / 60^2
-#[1] 4.088199
+##estimated runtime is ~500 sec on 7 cores
 
 clusterEvalQ(cl, {
   library("flexmix")
@@ -225,6 +217,8 @@ system.time(
 )
 
 table(unlist(lapply(res,function(x) x$n.groups)))
+   # 1    2    3 
+   # 1  790 4209 
 
 #save(res,file=paste0(HOME,"/2020918_object_adjustedBetas.RData"))
 
@@ -234,7 +228,7 @@ table(unlist(lapply(res,function(x) x$n.groups)))
 ##check stats
 temp4<-do.call("rbind",lapply(res,function(x) x$y.tum))
 #rownames(temp4)<-rownames(testDat2)
-temp5<-do.call("rbind",lapply(res,function(x) x$y.norm))
+temp5<-do.call("rbind",lapply(res,function(x) x$y.orig))
 #rownames(temp5)<-rownames(testDat2)
 
 table(apply(temp4,1,function(x) sum(is.na(x))))
@@ -252,7 +246,7 @@ quantile(testDat2)
 
 quantile(temp4)
 #    0%   25%   50%   75%  100% 
-# 0.000 0.035 0.497 0.964 1.000 
+# 0.000 0.035 0.496 0.964 1.000 
 
 ##Plot histogram of betas before and after correction
 pdf(paste0(HOME,"/20191203_top5k_betaDistribution_tumors_beforeAfterCorrection.pdf"),width=8,height=8,useDingbats=F)
@@ -570,15 +564,15 @@ plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
 
 ##will change slightly if rerun - not deterministic..
 cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
-#[1] 0.760453
+#[1] 0.763079
 (cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
-#[1] 0.0955181
+#[1] 0.100357
 (cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="spe" ))
-#[1] 0.6630773
+#[1] 0.6649534
 (cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="pe" ))
-#[1] -0.03931821
+#[1] -0.03620098
 (sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" ))
-#[1] 0.760453
+#[1] 0.763079
 (fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" )$p.value)
 #[1] 0
 
@@ -610,7 +604,7 @@ correctionTop5000<-res
 length(correctionTop5000)
 #[1] 5000
 
-save(correctionTop5000,file=paste0(HOME,"/20191203_top5k_correctionObject_5000cpgs_236tumors.RData"))
+save(correctionTop5000,file=paste0(HOME,"/20191203_top5k_correctionObject_5000cpgs_235tumors.RData"))
 
 dataTop5000<-testDat
 save(dataTop5000,file=paste0(HOME,"/20191203_top5k_testDataBetaMatrix_235withGex.RData"))
@@ -629,7 +623,7 @@ testDat<-do.call("rbind",lapply(res,function(x) x$y.orig))
 ##alluvial of results
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
 unique(c1[hclust( as.dist( 1-cor(temp1) ),method="ward.D")$order])
-#[1] 5 4 2 1 3
+#[1] 4 3 2 5 1
 
 c1<-cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5)
 unique(c1[hclust( as.dist( 1-cor(testDat) ),method="ward.D")$order])
@@ -641,17 +635,17 @@ cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(testDat) ),met
 
 table(cl$unadjusted,cl$adjusted)
   #    a  b  c  d  e
-  # 1 15 42 23  0  0
-  # 2 33  1 38  4  0
-  # 3  0  0  0  1 13
-  # 4  1  0  0 11 10
-  # 5 17  6 20  0  0
+  # 1 23 51  0  0  6
+  # 2 46  6 10  0 14
+  # 3  0  0  1 13  0
+  # 4  0  0 14  8  0
+  # 5 16  6  2  0 19
 
 cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
 cl$Var1<-factor(cl$Var1,levels=c("3","4","5","2","1"))
-cl$Var2<-factor(cl$Var2,levels=c("e","d","b","a","c"))
+cl$Var2<-factor(cl$Var2,levels=c("d","c","b","e","a"))
 
-(pal<-brewer.pal(5,"Set1")[c(5,4,2,1,3)])
+(pal<-brewer.pal(5,"Set1")[c(4 ,3 ,2,5 ,1)])
 #[1] "#4DAF4A" "#FF7F00" "#377EB8" "#984EA3" "#E41A1C"
 #names(pal)<-c("a","b","c","d","e")
 (pal2<-brewer.pal(5,"Set1")[c(3,4,5,2,1)])
@@ -668,7 +662,7 @@ q<-ggplot(cl,
                 ) +
   guides(fill = FALSE) +
   geom_stratum(width = 1/20, reverse = TRUE,colour="black",fill=c(pal2,pal)) +     #colour=c(pal2,pal),fill=c(pal2,pal)
-  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","b","a")),(c("e","d","b","a","c")))
+  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","b","a")),(c("d","c","b","e","a")))
     ) +
   scale_x_continuous(breaks = 1:2, labels = c("unadjusted", "adjusted")) +
   scale_fill_manual(values=rev(pal2)) +
@@ -956,39 +950,50 @@ resMat<-matrix(ncol=3,nrow=N,dimnames=list(1:N,c("p.raw","p.adj","p.dic")))
 ##generate 500 random CpG sets
 set.seed(20200904)
 varF<-apply(betaData[,samples_use],1,sd)
-varF<-varF >= quantile(varF,0)
+varF<-varF > 0
 p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
 
-fracTum2<-fracTum[match(samples_use,colnames(betaData))] ##legacy code... still works
+fracTum2<-fracTum[match(samples_use,colnames(betaData))] 
+
+##do multicore
+no_cores <- detectCores(logical = TRUE)
+
+cat("using", no_cores-1,"cores","\n")
+
+cl <- makeCluster(no_cores-1)  
+registerDoParallel(cl)  
+
+clusterEvalQ(cl, {
+  library("flexmix")
+})
+
+clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
 
 for (i in 1:N) {
-  cat(i," of ",N,"\n")
-  ##betaData filtered for chrX/Y
-  b<-apply(betaData[p_list[[i]],samples_use],1,function(x) {
-    adjustBeta(methylation=x,purity=fracTum2,snames=samples_use,nmax=3,nrep=3)
-  })
-  ##adjusted
-  b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
-  b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
-  b1<-cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2)
-  ##unadjusted
-  b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
-  b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
-  b2<-cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2)
-  ##dichotomized
-  b3<-do.call("rbind",lapply(b,function(x) x$y.orig>.3))
-  b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
-  b3<-cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2)
+ 	cat(i," of ",N,"\n")
+ 	##betaData filtered for chrX/Y
+ 	b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
+	##adjusted
+	b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
+  	b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
+  	b1<-cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2)
+  	##unadjusted
+  	b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
+  	b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
+  	b2<-cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2)
+  	##dichotomized
+  	b3<-do.call("rbind",lapply(b,function(x) x$y.orig>.3))
+  	b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
+  	b3<-cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2)
 
-  resMat[i,1]<- -log10(fisher.test(table(b2,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
-  resMat[i,2]<- -log10(fisher.test(table(b1,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
-  resMat[i,3]<- -log10(fisher.test(table(b3,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
+  	resMat[i,1]<- -log10(fisher.test(table(b2,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
+  	resMat[i,2]<- -log10(fisher.test(table(b1,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
+  	resMat[i,3]<- -log10(fisher.test(table(b3,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
 }
-rm(b,b1,b2,b3,i,N)
+rm(b,b1,b2,b3,i,N,cl)
 
 save(p_list,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 rm(p_list)
-
 
 pdf(paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
@@ -1037,11 +1042,22 @@ load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100rando
 iii<-which.max( resMat[,2]-resMat[,1] )
 iii<-p_list[[iii]]
 
-set.seed(20200904)
-b<-apply(betaData[iii,samples_use],1,function(x) {
-  adjustBeta(methylation=x,purity=fracTum2,snames=samples_use,nmax=3,nrep=3)
+##do multicore
+no_cores <- detectCores(logical = TRUE)
+
+cat("using", no_cores-1,"cores","\n")
+
+cl <- makeCluster(no_cores-1)  
+registerDoParallel(cl)  
+
+clusterEvalQ(cl, {
+  library("flexmix")
 })
- 
+
+clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+
+b<-parRapply(cl = cl, betaData[iii,samples_use], adjustBeta,purity=fracTum2,snames=samples_use) 
+
 rm(resMat,iii,p_list)
 
 ##adjusted
@@ -1142,8 +1158,8 @@ cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(b2) ),method="
 
 table(cl$unadjusted,cl$adjusted)
   #     a   b
-  # 1 186  14
-  # 2   2  33
+  # 1 184   7
+  # 2   8  36
 
 cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
 cl$Var2<-factor(cl$Var2,levels=c("b","a"))
@@ -1293,19 +1309,19 @@ str(tnbcClass)
 # $ PAM50_AIMS: chr  "Basal" "Basal" "Basal" "Basal" ...
 
 table(res[["cg21237687"]]$groups,tnbcClass$TNBCtype)   
-#    BL1 BL2 IM LAR  M MSL NA UNS
-#  1  22  13 16   5 18   2  3  11
-#  2  24   9 30  25 23  12  7  15
+  #   BL1 BL2 IM LAR  M MSL NA UNS
+  # 1  24   9 30  25 23  12  7  15
+  # 2  22  13 16   5 18   2  3  11
    
 table(res[["cg21237687"]]$groups,tnbcClass$PAM50_AIMS)   
-#    Basal Her2 LumB Normal
-#  1    78    8    0      4
-#  2   104   23    1     17
+  #  Basal Her2 LumB Normal
+  # 1   104   23    1     17
+  # 2    78    8    0      4
 
 table(res[["cg21237687"]]$groups,clinAnno[samples_use,"HRD.3"])   
-#    [0.0,0.2) [0.2,0.7) [0.7,1.0]
-#  1        22         5        63
-#  2        61         8        76
+  #  [0.0,0.2) [0.2,0.7) [0.7,1.0]
+  # 1        61         8        76
+  # 2        22         5        63
 
 probeN<-"cg21237687"
 geneN<-"239|ALOX12"
@@ -1397,40 +1413,39 @@ rm(geneN,probeN)
 ###Do brca1 promoter
 
 table(res[["cg09441966"]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
-  #     0   1
-  # 1 155   0
-  # 2  21   0
-  # 3   2  57
+  #    0   1
+  # 1   5  57
+  # 2 173   0
 
 #      0   1
 #  1 177   2
 #  2   1  55
 
 table(res[["cg09441966"]]$y.orig>.3,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
-#          0   1
-#  FALSE 178   7
-#  TRUE    0  50
+  #        0   1
+  # FALSE 178   7
+  # TRUE    0  50
 
 i<-"cg09441966"
 
-pdf(paste0(HOME,"/20191216_atacPromoters_BRCA1_betaVsTumFrac_adjNonAdj.pdf"),width=10,height=10,useDingbats=F)
+pdf(paste0(HOME,"/20191216_atacPromoters_BRCA1_betaVsTumFrac_adjNonAdj.pdf"),width=12,height=12,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=F)
 ##1
 bclass<-as.integer(factor(paste0(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])))
 plot(fracTum,res[[i]]$y.orig,col=1,xlim=0:1,ylim=0:1,
-  pch=c(16,16,16,17)[bclass],cex=1.2,
+  pch=c(17,16,16)[bclass],cex=1.2,
   main="BRCA1 methylation vs tumor fraction",
   xlab="tumor fraction",
   ylab="unadjusted beta",
   axes=F
 )
-points(fracTum,res[[i]]$y.orig,col=res[[i]]$groups,pch=c(16,16,16,17)[bclass],cex=1.1)
+points(fracTum,res[[i]]$y.orig,col=res[[i]]$groups,pch=c(17,16,16)[bclass],cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.5)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex=1.5)
-legend("topleft",legend=c("pyro unmeth","pyro meth"),col=1,pch=c(16,17),bty="n",cex=1.6)
+legend("topleft",legend=c("pyro concordant","pyro discordant"),col=c(1),pch=c(16,17),bty="n",cex=1.6)
 abline(lm(res[[i]]$y.orig[res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
 abline(lm(res[[i]]$y.orig[res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
-abline(lm(res[[i]]$y.orig[res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
+#abline(lm(res[[i]]$y.orig[res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
 
 ##2
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
@@ -1446,7 +1461,7 @@ axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 abline(lm(res[[i]]$y.tum[res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
 abline(lm(res[[i]]$y.tum[res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
-abline(lm(res[[i]]$y.tum[res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
+#abline(lm(res[[i]]$y.tum[res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
 
 ##3
 par(fig=c(0,.5,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
@@ -1455,18 +1470,17 @@ length(res[[i]]$groups)
 #[1] 235
 
 table(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
-  #     0   1
-  # 1 155   0
-  # 2  21   0
-  # 3   2  57
+  #   0   1
+  # 1   5  57
+  # 2 173   0
 
 table(paste0(res[[i]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"]))
-#  10  20  30  31 
-# 155  21   2  57 
+# 10  11  20 
+#   5  57 173 
 
 plot(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100),
-  pch=c(16,16,17,16)[bclass],cex=1.2,
-  main="Pyorsequencing BRCA1 methylation vs tumor fraction",
+  pch=c(17,16,16)[bclass],cex=1.2,
+  main="Pyro BRCA1 methylation vs tumor fraction",
   xlab="tumor fraction",
   ylab="Pyro BRCA1 methylation percent",
   axes=F
@@ -1474,29 +1488,29 @@ plot(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100
 #abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==1]~fracTum[res[[i]]$groups==1]),col=1,lwd=3)
 #abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==2]~fracTum[res[[i]]$groups==2]),col=2,lwd=3)
 #abline(lm(clinAnno[samples_use,"BRCA1_PromMetPc"][res[[i]]$groups==3]~fracTum[res[[i]]$groups==3]),col=3,lwd=3)
-points(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,16,17,16)[bclass],cex=1.1)
-points(fracTum[bclass==1],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==1],col=1,pch=c(16),cex=1.1)
-points(fracTum[bclass==2],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==2],col=1,pch=c(16),cex=1.1)
-points(fracTum[bclass==3],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==3],col=3,pch=c(17),cex=1.1)
-points(fracTum[bclass==4],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==4],col=3,pch=c(16),cex=1.1)
+points(fracTum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(17,16,16)[bclass],cex=1.1)
+points(fracTum[bclass==2],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==2],col=res[[i]]$groups[bclass==2],pch=c(16),cex=1.1)
+points(fracTum[bclass==3],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==3],col=res[[i]]$groups[bclass==3],pch=c(16),cex=1.1)
+points(fracTum[bclass==1],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==1],col=res[[i]]$groups[bclass==1],pch=c(17),cex=1.1)
+#points(fracTum[bclass==4],clinAnno[samples_use,"BRCA1_PromMetPc"][bclass==4],col=3,pch=c(16),cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,100,20),cex=1.6)
-legend("topleft",legend=c("pyro meth","pyro unmeth","discordant"),col=c(3,1,3),pch=c(16,16,17),bty="n",cex=1.5)
+legend("topleft",legend=c("pyro meth","pyro unmeth","discordant"),col=c(1,2,1),pch=c(16,16,17),bty="n",cex=1.5)
 abline(h=7,lwd=3,lty=2,col="lightgrey")
 
 ##4
 par(fig=c(.5,1,0,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=T)
 plot(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=1,xlim=0:1,ylim=c(0,100),
-  pch=c(16,17,17,16)[bclass],cex=1.2,
+  pch=c(17,16,16)[bclass],cex=1.2,
   main="Pyro BRCA1 methylation vs adjusted beta",
   xlab="adjusted beta",
   ylab="Pyro BRCA1 methylation percent",
   axes=F
 )
-points(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(16,16,16,17)[bclass],cex=1.1)
+points(res[[i]]$y.tum,clinAnno[samples_use,"BRCA1_PromMetPc"],col=res[[i]]$groups,pch=c(17,16,16)[bclass],cex=1.1)
 axis(1,lwd=2,las=1,at=seq(0,1,.2),cex=1.6)
 axis(2,lwd=2,las=1,at=seq(0,100,20),cex=1.6)
-legend("topleft",legend=c("concordant (N=233)","discordant (N=2)"),col=1,pch=c(16,17),bty="n",cex=1.5)
+legend("topleft",legend=c("concordant (N=230)","discordant (N=5)"),col=1,pch=c(16,17),bty="n",cex=1.5)
 rm(bclass)
 
 dev.off()
@@ -1648,6 +1662,20 @@ save(allCorrs,file=paste0(HOME,"/20200116_object_gexCorr_top5000_adjNonAdj.RData
 
 load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 
+##do multicore
+no_cores <- detectCores(logical = TRUE)
+
+cat("using", no_cores-1,"cores","\n")
+
+cl <- makeCluster(no_cores-1)  
+registerDoParallel(cl)  
+
+clusterEvalQ(cl, {
+  library("flexmix")
+})
+
+clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+
 resMat2<-matrix(nrow=length(p_list),ncol=9)
 colnames(resMat2)<-c("rawAcc","rawSens","rawSpec",
   "adjAcc","adjSens","adjSpec",
@@ -1658,9 +1686,7 @@ for( i in 1:length(p_list)) {
      cat(".")
      if(i%%10==0)  cat(" ",i,"\n")
      
-    b<-apply(betaData[p_list[[i]],samples_use],1,function(x) {
-      adjustBeta(methylation=x,purity=fracTum2,snames=samples_use,nmax=3,nrep=3)
-    })
+    b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
 
      ##unadjusted
      b1<-do.call("rbind",lapply(b,function(x) x$y.orig))
@@ -1691,7 +1717,7 @@ for( i in 1:length(p_list)) {
      resMat2[i,7:9]<-as.numeric(r1)
 }     
      
-rm(i,p_list,b,b1,b2,b3,r1,refStat)
+rm(i,p_list,b,b1,b2,b3,r1,refStat,cl)
 
 pdf(paste0(HOME,"/20200121_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
