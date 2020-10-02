@@ -1794,37 +1794,37 @@ t.test(resMat2[,4]-resMat2[,1])
 #         One Sample t-test
 
 # data:  resMat2[, 4] - resMat2[, 1]
-# t = 26.228, df = 99, p-value < 2.2e-16
+# t = 29.064, df = 99, p-value < 2.2e-16
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  0.2288446 0.2663043
+#  0.2516462 0.2885240
 # sample estimates:
 # mean of x 
-# 0.2475745 
+# 0.2700851 
 
 t.test(resMat2[,5]-resMat2[,2])
 #         One Sample t-test
 
 # data:  resMat2[, 5] - resMat2[, 2]
-# t = 19.014, df = 99, p-value < 2.2e-16
+# t = 19.755, df = 99, p-value < 2.2e-16
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  0.2456137 0.3028478
+#  0.2648265 0.3239647
 # sample estimates:
 # mean of x 
-# 0.2742308 
+# 0.2943956 
 
 t.test(resMat2[,6]-resMat2[,3])
 #         One Sample t-test
 
 # data:  resMat2[, 6] - resMat2[, 3]
-# t = 6.1483, df = 99, p-value = 1.656e-08
+# t = 6.5142, df = 99, p-value = 3.065e-09
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  0.1056802 0.2063952
+#  0.1297641 0.2434434
 # sample estimates:
 # mean of x 
-# 0.1560377 
+# 0.1866038 
 
 
 ##deltas - beta>.3
@@ -1832,43 +1832,42 @@ t.test(resMat2[,7]-resMat2[,1])
 #         One Sample t-test
 
 # data:  resMat2[, 7] - resMat2[, 1]
-# t = -6.0616, df = 99, p-value = 2.456e-08
+# t = -4.3022, df = 99, p-value = 3.974e-05
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  -0.08873422 -0.04496791
+#  -0.07094633 -0.02616005
 # sample estimates:
 #   mean of x 
-# -0.06685106 
+# -0.04855319 
 
 t.test(resMat2[,8]-resMat2[,2])
 #         One Sample t-test
 
 # data:  resMat2[, 8] - resMat2[, 2]
-# t = -3.7132, df = 99, p-value = 0.0003386
+# t = -2.1794, df = 99, p-value = 0.03168
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  -0.10403372 -0.03157067
+#  -0.070749732 -0.003316202
 # sample estimates:
-#  mean of x 
-# -0.0678022 
+#   mean of x 
+# -0.03703297 
 
 t.test(resMat2[,9]-resMat2[,3])
 #         One Sample t-test
 
 # data:  resMat2[, 9] - resMat2[, 3]
-# t = -1.5116, df = 99, p-value = 0.1338
+# t = -2.2099, df = 99, p-value = 0.02942
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  -0.14705277  0.01988296
+#  -0.167227780 -0.008998635
 # sample estimates:
 #   mean of x 
-# -0.06358491 
+# -0.08811321 
 
 save(resMat2,file=paste0(HOME,"/20200121_top50percentBySd_basalVsLuminalSplitIn100randomSets_resultsConfusionMatrix.RData"))
 
 ################################################################################
 ##Temp save
-
 
 #HOME<-"I:/data/adjustBetas"
 #GIT<-"F:/gitProjects/adjustBetas"
