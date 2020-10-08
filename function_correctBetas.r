@@ -119,7 +119,7 @@ adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3) {
     n.groups=length(levels(factor(cl))),
     med.norm=round(median(res.norm),3),
     glob.cor=gl.corr,
-    avg.betaDiff=round(mean(y-res.tum),3),
+    avg.betaDiff=round(mean(res.orig-res.tum),3),
     model.intercepts=res.int,
     model.slopes=res.slope   
     )
