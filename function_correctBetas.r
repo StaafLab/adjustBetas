@@ -34,7 +34,13 @@ if(! "flexmix" %in% names(sessionInfo()$otherPkgs) ) {
 
 ##define function with input = betas and purity estimate
   ##output = line parameters for L1/L2/L3
-adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3) {
+adjustBeta<-function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3,seed=TRUE) {
+  #grab unique row-seed from vector slot 1
+    #delete seed afterwards
+  if(seed) {
+  set.seed( as.integer(methylation[1]) )
+  methylation<-methylation[-1]
+  }
   #define variables
   x<-as.numeric(purity)
   x2<-1-as.numeric(purity)
