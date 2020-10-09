@@ -211,14 +211,43 @@ clusterEvalQ(cl, {
 
 #clusterExport(cl,list("adjustBeta","betaData","fracTum"))
 
-clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
-system.time(
-	res<-parRapply(cl = cl, testDat2, adjustBeta,purity=fracTum,snames=colnames(testDat2))
-)
+betaRun<-cbind(seed=1:nrow(testDat2),testDat2)
+betaNames<-colnames(testDat2)
+
+#clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+res<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+
+res2<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+
+res3<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
 
 table(unlist(lapply(res,function(x) x$n.groups)))
-   # 1    2    3 
-   # 1  790 4209 
+ #   2    3 
+ # 781 4219 
+
+table(unlist(lapply(res,function(x) x$n.groups)),unlist(lapply(res2,function(x) x$n.groups)))
+  #      2    3
+  # 2  781    0
+  # 3    0 4219
+
+table(unlist(lapply(res,function(x) x$n.groups)),unlist(lapply(res3,function(x) x$n.groups)))
+  #      2    3
+  # 2  781    0
+  # 3    0 4219
+
+rm(betaRun,betaNames)
+
+table( unlist(lapply(1:length(res),function(x) { all( unlist(res[[x]],use.names=FALSE) == unlist(res[[x]],use.names=FALSE) ) }) ) )
+# TRUE 
+# 5000 
+table( unlist(lapply(1:length(res),function(x) { all( unlist(res[[x]],use.names=FALSE) == unlist(res2[[x]],use.names=FALSE) ) }) ) )
+# TRUE 
+# 5000 
+table( unlist(lapply(1:length(res),function(x) { all( unlist(res[[x]],use.names=FALSE) == unlist(res3[[x]],use.names=FALSE) ) }) ) )
+# TRUE 
+# 5000 
+
+rm(res2,res3)
 
 #save(res,file=paste0(HOME,"/2020918_object_adjustedBetas.RData"))
 
