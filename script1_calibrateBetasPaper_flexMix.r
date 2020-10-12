@@ -1087,6 +1087,7 @@ clusterEvalQ(cl, {
   library("flexmix")
 })
 
+set.seed(12345)
 betaRun<-cbind(seed=sample(length(iii)),betaData[iii,samples_use])
 betaNames<-samples_use
 b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
@@ -1097,13 +1098,13 @@ rm(resMat,iii,p_list,betaRun,betaNames)
 b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
 
 ##unadjusted
-b2<-do.call("rbind",lapply(b,function(x) x$y.norm))
+b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
 
 
 ##do clustering
 c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
 c2<-unique(c1[hclust( as.dist( 1-cor(b1) ),method="ward.D")$order])
-r1<-hclust( dist(b1),method="ward.D") ##do rowclusters based on unadj data
+r1<-hclust( dist(b2),method="ward.D") ##do rowclusters based on unadj data
 c3<-hclust( as.dist( 1-cor(b1) ),method="ward.D")
 c4<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
 c5<-hclust( as.dist( 1-cor(b2) ),method="ward.D")
@@ -1191,8 +1192,8 @@ cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(b2) ),method="
 
 table(cl$unadjusted,cl$adjusted)
   #     a   b
-  # 1 184   7
-  # 2   8  36
+  # 1 169  19
+  # 2  19  28
 
 cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
 cl$Var2<-factor(cl$Var2,levels=c("b","a"))
@@ -1284,7 +1285,7 @@ ww<- c(image_info(a1)$width , ceiling( image_info(a1)$height / 2 ))
 
 a1<-image_crop(a1,paste0(ww,collapse="x"))
 
-image_write(a1, path = paste0(HOME,"/20191215_random500_heatmap_noAnno_unadj_adj_combinedTopCropped.tiff"), format = "tiff")
+image_write(a1, path = paste0(HOME,"/20191215_top5k_heatmap_noAnno_unadj_adj_combinedTopCropped.tiff"), format = "tiff")
 
 rm(a1,ww)
 
@@ -1446,6 +1447,11 @@ rm(geneN,probeN)
 ###Do brca1 promoter
 
 table(res[["cg09441966"]]$groups,clinAnno[samples_use,"BRCA1_PromMetPc_Class"])
+  #     0   1
+  # 1 163   0
+  # 2   2  57
+  # 3  13   0
+
   #    0   1
   # 1   5  57
   # 2 173   0
@@ -1707,19 +1713,24 @@ clusterEvalQ(cl, {
   library("flexmix")
 })
 
-clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+#clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
 
 resMat2<-matrix(nrow=length(p_list),ncol=9)
 colnames(resMat2)<-c("rawAcc","rawSens","rawSpec",
   "adjAcc","adjSens","adjSpec",
   "binAcc","binSens","binSpec")
 
+set.seed(201012)
 refStat<-factor(1+(tnbcClass$PAM50_AIMS != "Basal"))
 for( i in 1:length(p_list)) {
      cat(".")
      if(i%%10==0)  cat(" ",i,"\n")
-     
-    b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
+
+  	##betaData filtered for chrX/Y
+ 	betaRun<-cbind(seed=sample(length(p_list[[i]])),betaData[p_list[[i]],samples_use])
+	betaNames<-samples_use
+	b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+    #b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
 
      ##unadjusted
      b1<-do.call("rbind",lapply(b,function(x) x$y.orig))
@@ -1750,7 +1761,7 @@ for( i in 1:length(p_list)) {
      resMat2[i,7:9]<-as.numeric(r1)
 }     
      
-rm(i,p_list,b,b1,b2,b3,r1,refStat,cl)
+rm(i,p_list,b,b1,b2,b3,r1,refStat,cl,betaRun,betaNames)
 
 pdf(paste0(HOME,"/20200121_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
