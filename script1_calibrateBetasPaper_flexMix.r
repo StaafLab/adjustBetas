@@ -143,6 +143,7 @@ rm(fracA,fracB)
 ###get test data
 
 ##filter X and get top5k
+
 betaData<-betaNew[,samples_use]
 
 all.equal(sampleSets$samplesAll,colnames(betaData))
@@ -185,7 +186,7 @@ length(intersect(rownames(betaNew),rownames(beta_norm)))
 
 ##create data set and run function
 set.seed(20191203)
-testDat2<-betaData[varF,]
+testDat2<-betaData[varF,samples_use]
 
 str(testDat2)
  # num [1:5000, 1:235] 0.008 0.044 0.163 0.705 0.65 0.067 0.057 0.704 0.06 0 ...
@@ -374,8 +375,8 @@ my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984
   )
 
 tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
-  clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
+pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, unadj clust , pearC/euclR",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
@@ -399,8 +400,8 @@ dev.off()
 
 ##infiltration estimeates by group
 tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
-  clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
+pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, unadj clust , pearC/euclR",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
@@ -485,8 +486,8 @@ my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984
   )
 
 tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
-  clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
+pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
@@ -510,8 +511,8 @@ dev.off()
 
 ##infiltration estimeates by group
 tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_adjClust_adjBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
-  clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
+pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
@@ -652,7 +653,7 @@ testDat<-do.call("rbind",lapply(res,function(x) x$y.orig))
 ##alluvial of results
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
 unique(c1[hclust( as.dist( 1-cor(temp1) ),method="ward.D")$order])
-#[1] 4 3 2 5 1
+#[1] 4 3 1 5 2
 
 c1<-cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5)
 unique(c1[hclust( as.dist( 1-cor(testDat) ),method="ward.D")$order])
@@ -672,9 +673,9 @@ table(cl$unadjusted,cl$adjusted)
 
 cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
 cl$Var1<-factor(cl$Var1,levels=c("3","4","5","2","1"))
-cl$Var2<-factor(cl$Var2,levels=c("d","c","b","e","a"))
+cl$Var2<-factor(cl$Var2,levels=c("d","c","a","e","b"))
 
-(pal<-brewer.pal(5,"Set1")[c(4 ,3 ,2,5 ,1)])
+(pal<-brewer.pal(5,"Set1")[c(4 ,3 ,1,5 ,2)])
 #[1] "#4DAF4A" "#FF7F00" "#377EB8" "#984EA3" "#E41A1C"
 #names(pal)<-c("a","b","c","d","e")
 (pal2<-brewer.pal(5,"Set1")[c(3,4,5,2,1)])
@@ -691,7 +692,7 @@ q<-ggplot(cl,
                 ) +
   guides(fill = FALSE) +
   geom_stratum(width = 1/20, reverse = TRUE,colour="black",fill=c(pal2,pal)) +     #colour=c(pal2,pal),fill=c(pal2,pal)
-  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","b","a")),(c("d","c","b","e","a")))
+  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("c","d","e","b","a")),(c("d","c","a","e","b")))
     ) +
   scale_x_continuous(breaks = 1:2, labels = c("unadjusted", "adjusted")) +
   scale_fill_manual(values=rev(pal2)) +
@@ -755,8 +756,8 @@ my_colour = list(unadj5000=c("a"="#E41A1C","b"="#377EB8","c"="#4DAF4A","d"="#984
   )
 
 tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(temp1,clustering_distance_rows = "euclidean",#"correlation"
-  clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
+pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
   ,main=" ",cutree_cols=5,fontsize=18
   ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
   ,treeheight_row=0,treeheight_col=0,legend=F
@@ -827,8 +828,8 @@ my_colour = list(unadj5000=c("a"="#E41A1C","b"="#377EB8","c"="#4DAF4A","d"="#984
   )
 
 tiff(paste0(HOME,"/20191203_top5k_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(testDat,clustering_distance_rows = "euclidean",#"correlation"
-  clustering_distance_cols = "correlation", clustering_method = "ward.D",show_rownames=F,show_colnames=F
+pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=5,fontsize=18
   ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
   ,treeheight_row=0,treeheight_col=0,legend=F
@@ -982,8 +983,6 @@ varF<-apply(betaData[,samples_use],1,sd)
 varF<-varF > 0
 p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
 
-fracTum2<-fracTum[match(samples_use,colnames(betaData))] 
-
 ##do multicore
 no_cores <- detectCores(logical = TRUE)
 
@@ -996,12 +995,17 @@ clusterEvalQ(cl, {
   library("flexmix")
 })
 
-clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+#clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+
+set.seed(20201011)
 
 for (i in 1:N) {
  	cat(i," of ",N,"\n")
  	##betaData filtered for chrX/Y
- 	b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
+ 	betaRun<-cbind(seed=sample(length(p_list[[i]])),betaData[p_list[[i]],samples_use])
+	betaNames<-samples_use
+	b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+ 	#b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
 	##adjusted
 	b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
   	b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
@@ -1019,7 +1023,7 @@ for (i in 1:N) {
   	resMat[i,2]<- -log10(fisher.test(table(b1,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
   	resMat[i,3]<- -log10(fisher.test(table(b3,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
 }
-rm(b,b1,b2,b3,i,N,cl)
+rm(b,b1,b2,b3,i,N,cl,betaRun,betaNames)
 
 save(p_list,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 rm(p_list)
@@ -1053,7 +1057,7 @@ rm(resMat)
 
 rm(varF)
 
-################################################################################
+################################################################################  ##HERE!!!
 ###Do plot with one of the random 500 iterations
 
 ##4 figure panels
@@ -1083,11 +1087,11 @@ clusterEvalQ(cl, {
   library("flexmix")
 })
 
-clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+betaRun<-cbind(seed=sample(length(iii)),betaData[iii,samples_use])
+betaNames<-samples_use
+b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
 
-b<-parRapply(cl = cl, betaData[iii,samples_use], adjustBeta,purity=fracTum2,snames=samples_use) 
-
-rm(resMat,iii,p_list)
+rm(resMat,iii,p_list,betaRun,betaNames)
 
 ##adjusted
 b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
