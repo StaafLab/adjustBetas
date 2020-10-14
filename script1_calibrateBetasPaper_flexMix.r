@@ -1838,37 +1838,37 @@ t.test(resMat2[,4]-resMat2[,1])
 #         One Sample t-test
 
 # data:  resMat2[, 4] - resMat2[, 1]
-# t = 29.064, df = 99, p-value < 2.2e-16
+# t = 28.641, df = 99, p-value < 2.2e-16
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  0.2516462 0.2885240
+#  0.2511362 0.2885233
 # sample estimates:
 # mean of x 
-# 0.2700851 
+# 0.2698298 
 
 t.test(resMat2[,5]-resMat2[,2])
 #         One Sample t-test
 
 # data:  resMat2[, 5] - resMat2[, 2]
-# t = 19.755, df = 99, p-value < 2.2e-16
+# t = 20.012, df = 99, p-value < 2.2e-16
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  0.2648265 0.3239647
+#  0.2647609 0.3230413
 # sample estimates:
 # mean of x 
-# 0.2943956 
+# 0.2939011 
 
 t.test(resMat2[,6]-resMat2[,3])
 #         One Sample t-test
 
 # data:  resMat2[, 6] - resMat2[, 3]
-# t = 6.5142, df = 99, p-value = 3.065e-09
+# t = 6.6399, df = 99, p-value = 1.703e-09
 # alternative hypothesis: true mean is not equal to 0
 # 95 percent confidence interval:
-#  0.1297641 0.2434434
+#  0.1312371 0.2431025
 # sample estimates:
 # mean of x 
-# 0.1866038 
+# 0.1871698 
 
 
 ##deltas - beta>.3
