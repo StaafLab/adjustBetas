@@ -175,7 +175,6 @@ length(intersect(varF,rownames(beta_norm)))
 #[1] 5000
 
 ##create data set and run function
-set.seed(20210604)
 testDat2<-betaData[varF,]
 
 str(testDat2)
@@ -289,14 +288,14 @@ dev.off()
 
 rm(temp4,temp5)
 
-################################################################################      ##HÄR
+################################################################################
 ###plot top5k clusters - unadjuster order
 
 ##check stats
 temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
-#rownames(temp1)<-rownames(testDat2)
 temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
-#rownames(temp2)<-rownames(testDat2)
+temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
+temp4<-beta_norm[rownames(temp1),]
 
 table(apply(temp1,1,function(x) sum(is.na(x))))
 #   0
@@ -304,11 +303,9 @@ table(apply(temp1,1,function(x) sum(is.na(x))))
 table(apply(temp2,1,function(x) sum(is.na(x))))
 #   0
 #5000
-
-##remove NA-rows
-testDat2<-testDat2[!apply(temp1,1,function(x) any(is.na(x))),]
-temp2<-temp2[!apply(temp1,1,function(x) any(is.na(x))),]
-temp1<-temp1[!apply(temp1,1,function(x) any(is.na(x))),]
+table(apply(temp3,1,function(x) sum(is.na(x))))
+#   0
+#5000
 
 table(annoObj[rownames(temp1),"chr"])
  # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
@@ -316,44 +313,60 @@ table(annoObj[rownames(temp1),"chr"])
  # chr5  chr6  chr7  chr8  chr9 
  #  370   392   386   353    57 
 
-testDat<-testDat2[,samples_use]
-temp1<-temp1[,samples_use]
-temp2<-temp2[,samples_use]
-
 ##do clustering
-c1<-cutree( hclust( as.dist( 1-cor(testDat) ),method="ward.D"),5)
-c2<-unique(c1[hclust( as.dist( 1-cor(testDat) ),method="ward.D")$order])
-r1<-hclust( dist(testDat),method="ward.D")
-c3<-hclust( as.dist( 1-cor(testDat) ),method="ward.D")
+c1<-cutree( hclust( as.dist( 1-cor(temp3) ),method="ward.D"),5)
+c2<-unique(c1[hclust( as.dist( 1-cor(temp3) ),method="ward.D")$order])
+r1<-hclust( dist(temp3),method="ward.D")
+c3<-hclust( as.dist( 1-cor(temp3) ),method="ward.D")
 c4<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
 
-sample_anno<-data.frame(unadj5000=c1,
-  adj5000=c4,
-  AIMS=tnbcClass$PAM50_AIMS,
-  TNBC=tnbcClass$TNBCtype,
-  #umap=factor(clusters.umap[samples_use,"class"]),
-  hrd3=factor(clinAnno[samples_use,"HRD.3"])
+sample_anno<-data.frame(unadj5000=as.character(c1),
+  adj5000=as.character(c4),
+  ER=sampleAnno$ER,
+  PR=sampleAnno$PR,
+  HER2=sampleAnno$HER2,
+  TNBC=as.character(as.integer(sampleAnno$TNBC)),
+  PAM50=sampleAnno$pam50.full,stringsAsFactors=FALSE
   )
-rownames(sample_anno)<-samples_use
+rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
-    #umap = c("1" = "#5977ff", "2" = "#f74747"),
-    AIMS = c("Basal" = "red" , "Her2" = "pink" , "LumA" = "darkgreen" , "LumB" = "orange" , "Normal" = "grey"),
-    TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
-    ,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    ER = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    PR = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    HER2 = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
   )
 
-tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(testDat,cluster_rows = r1, cluster_cols = c3
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, unadj clust , pearC/euclR",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
 dev.off()
 
-tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, unadj clust , pearC/euclR",cutree_cols=5
@@ -361,13 +374,207 @@ pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_normalBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_InferredNormalBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, \"inferred normal\", unadj clust , pearC/euclR",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
 dev.off()
+
+sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
+  "adj5000"=rep("NA",ncol(temp4)),
+  "ER"=rep("NA",ncol(temp4)),
+  "PR"=rep("NA",ncol(temp4)),
+  "HER2"=rep("NA",ncol(temp4)),
+  "TNBC"=rep("NA",ncol(temp4)),
+  "PAM50"=rep("NA",ncol(temp4)),stringsAsFactors=FALSE
+)
+rownames(sample_anno)<-colnames(temp4)
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_normalBeta.tiff"),width=9*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp4,cluster_rows = r1, 
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, GSE67919 external normal, default clust , pearC/euclR"
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+  
+)
+dev.off()
+
+################################################################################
+###plot top5k clusters - unadjuster order
+
+##check stats
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
+temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
+temp4<-beta_norm[rownames(temp1),]
+
+table(apply(temp1,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp2,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp3,1,function(x) sum(is.na(x))))
+#   0
+#5000
+
+table(annoObj[rownames(temp1),"chr"])
+ # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
+ #  557   272   213   255   156   144    98   169   272    69   205   365   130    43    54   248   192 
+ # chr5  chr6  chr7  chr8  chr9 
+ #  370   392   386   353    57 
+
+##do clustering
+c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
+c2<-unique(c1[hclust( as.dist( 1-cor(temp1) ),method="ward.D")$order])
+r1<-hclust( dist(temp1),method="ward.D")
+c3<-hclust( as.dist( 1-cor(temp1) ),method="ward.D")
+c4<-cutree( hclust( as.dist( 1-cor(temp3) ),method="ward.D"),5)
+
+sample_anno<-data.frame(adj5000=as.character(c1),
+  unadj5000=as.character(c4),
+  ER=sampleAnno$ER,
+  PR=sampleAnno$PR,
+  HER2=sampleAnno$HER2,
+  TNBC=as.character(as.integer(sampleAnno$TNBC)),
+  PAM50=sampleAnno$pam50.full,stringsAsFactors=FALSE
+  )
+rownames(sample_anno)<-colnames(temp1)
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    ER = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    PR = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    HER2 = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
+  )
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, unadj data, adj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, \"inferred normal\", adj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
+  "adj5000"=rep("NA",ncol(temp4)),
+  "ER"=rep("NA",ncol(temp4)),
+  "PR"=rep("NA",ncol(temp4)),
+  "HER2"=rep("NA",ncol(temp4)),
+  "TNBC"=rep("NA",ncol(temp4)),
+  "PAM50"=rep("NA",ncol(temp4)),stringsAsFactors=FALSE
+)
+rownames(sample_anno)<-colnames(temp4)
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_normalBeta.tiff"),width=9*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp4,cluster_rows = r1, 
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, GSE67919 external normal, default clust , pearC/euclR"
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+  
+)
+dev.off()
+
+###Inferred vs actual normal
+
+plot(apply(temp4,1,median,na.rm=T),apply(temp1,1,median,na.rm=T))
+
+cor.test(apply(temp4,1,median,na.rm=T),apply(temp2,1,median,na.rm=T))
+#         Pearson's product-moment correlation
+# data:  apply(temp4, 1, median, na.rm = T) and apply(temp2, 1, median, na.rm = T)
+# t = 157.29, df = 4998, p-value < 2.2e-16
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+#  0.9073237 0.9166471
+# sample estimates:
+#       cor 
+# 0.9121032 
+
+cor.test(apply(temp4,1,median,na.rm=T),apply(temp2,1,median,na.rm=T),method="spe")
+#         Spearman's rank correlation rho
+# data:  apply(temp4, 1, median, na.rm = T) and apply(temp2, 1, median, na.rm = T)
+# S = 2683212584, p-value < 2.2e-16
+# alternative hypothesis: true rho is not equal to 0
+# sample estimates:
+#       rho 
+# 0.8712058 
+# Warning message:
+# In cor.test.default(apply(temp4, 1, median, na.rm = T), apply(temp2,  :
+#   Cannot compute exact p-value with ties
+ 
+##check stats
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
+temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
+temp4<-beta_norm[rownames(temp1),]
+
+
+plot(apply(temp4,1,median,na.rm=T),apply(temp1,1,median,na.rm=T))
+
+plot(apply(temp4,1,median,na.rm=T),apply(temp2,1,median,na.rm=T))
+
+plot(apply(temp4,1,median,na.rm=T),apply(temp3,1,median,na.rm=T))
+
+cor(apply(temp4,1,mean,na.rm=T),apply(temp2,1,mean,na.rm=T))
+
+
+
+
+
+
+
+
+
+###HERE
+
+
+
+
+
+
+
+
 
 ##infiltration estimeates by group
 tiff(paste0(HOME,"/20191203_top5k_heatmap_pear_eucl_unadjClust_unadjBeta_forInfiltrationEstimate.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
