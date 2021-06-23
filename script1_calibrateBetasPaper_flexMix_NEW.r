@@ -516,7 +516,78 @@ pheatmap(temp4,cluster_rows = r1,
 )
 dev.off()
 
-###Inferred vs actual normal
+################################################################################
+################################################################################
+
+##save.image(paste0(HOME,"/adjustBetas/tempWorkspace_210608.RData")) ##remove later
+#load(paste0(HOME,"/adjustBetas/tempWorkspace_210608.RData"))
+
+################################################################################
+################################################################################
+
+
+################################################################################
+###Check correlation "inferred normal" to true normal
+
+ff<-intersect( rownames(temp2) , rownames(beta_norm) )
+
+length(ff)
+#[1] 3694
+
+#plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
+
+table(apply(beta_norm[ff,],1,function(z) any(is.na(z))))
+#FALSE  TRUE 
+# 2902   792 
+
+table(apply(beta_norm[ff,],1,function(z) sum(is.na(z))))
+#   0    1    2    3    4    5    6    7    8    9   10   11   12   14   16   17   21   24 
+#2902  344  168  125   54   36   25   12   11    4    4    2    2    1    1    1    1    1 
+
+ff2<-!apply(beta_norm[ff,],1,function(z) any(is.na(z)))
+
+ff<-ff[ff2]
+
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
+
+##will change slightly if rerun - not deterministic..
+cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
+#[1] 0.763079
+(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
+#[1] 0.100357
+(cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="spe" ))
+#[1] 0.6649534
+(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="pe" ))
+#[1] -0.03620098
+(sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" ))
+#[1] 0.763079
+(fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" )$p.value)
+#[1] 0
+
+length(ff)
+#[1] 2902
+
+pdf(paste0(HOME,"/20191203_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16
+  ,main="Correlation 450K normal - 850K inferred normal"
+  ,xlab="mean inferred normal beta 850k",ylab="mean normal beta 450k GSE67919"
+  ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
+ )
+points(rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16)
+text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
+abline(lm(rowMeans(beta_norm[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
+axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
+dev.off()
+
+rm(ff,fs,ff2)
+
+
+
+
+################################################################################
+##Inferred vs actual normal
 
 plot(apply(temp4,1,median,na.rm=T),apply(temp1,1,median,na.rm=T))
 
@@ -559,17 +630,32 @@ plot(apply(temp4,1,median,na.rm=T),apply(temp3,1,median,na.rm=T))
 cor(apply(temp4,1,mean,na.rm=T),apply(temp2,1,mean,na.rm=T))
 
 
-save.image(paste0(HOME,"/tempWorkspace_210608.RData"))
+
+
+
+
+
+
+################################################################################
+###Save objects
+
+##Save correction object
+correctionTop5000<-res
+
+length(correctionTop5000)
+#[1] 5000
+
+save(correctionTop5000,file=paste0(HOME,"/20191203_top5k_correctionObject_5000cpgs_235tumors.RData"))
+
+dataTop5000<-testDat
+save(dataTop5000,file=paste0(HOME,"/20191203_top5k_testDataBetaMatrix_235withGex.RData"))
+
+dataAdjTop5000<-temp1
+save(dataAdjTop5000,file=paste0(HOME,"/20191203_top5k_testDataAdjBetaMatrix_235withGex.RData"))
+
+rm(correctionTop5000,dataTop5000,dataAdjTop5000)
 
 ################################################################################
-###plot top5000 clusters - adjusted order
-
-
-
-
-
-###HERE
-
 
 
 
@@ -748,84 +834,13 @@ rm(a1,a2,a3,a4)
 
 rm(sample_anno,my_colour,c1,c2,c3,c4,r1)
 
-################################################################################
-###Check correlation "inferred normal" to true normal
 
-ff<-intersect( rownames(temp2) , rownames(beta_norm) )
 
-length(ff)
-#[1] 3694
-
-#plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
-
-table(apply(beta_norm[ff,],1,function(z) any(is.na(z))))
-#FALSE  TRUE 
-# 2902   792 
-
-table(apply(beta_norm[ff,],1,function(z) sum(is.na(z))))
-#   0    1    2    3    4    5    6    7    8    9   10   11   12   14   16   17   21   24 
-#2902  344  168  125   54   36   25   12   11    4    4    2    2    1    1    1    1    1 
-
-ff2<-!apply(beta_norm[ff,],1,function(z) any(is.na(z)))
-
-ff<-ff[ff2]
-
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
-
-##will change slightly if rerun - not deterministic..
-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
-#[1] 0.763079
-(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
-#[1] 0.100357
-(cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="spe" ))
-#[1] 0.6649534
-(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="pe" ))
-#[1] -0.03620098
-(sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" ))
-#[1] 0.763079
-(fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" )$p.value)
-#[1] 0
-
-length(ff)
-#[1] 2902
-
-pdf(paste0(HOME,"/20191203_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16
-  ,main="Correlation 450K normal - 850K inferred normal"
-  ,xlab="mean inferred normal beta 850k",ylab="mean normal beta 450k GSE67919"
-  ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
- )
-points(rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16)
-text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(beta_norm[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
-axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
-dev.off()
-
-rm(ff,fs,ff2)
-
-################################################################################
-###Save objects
-
-##Save correction object
-correctionTop5000<-res
-
-length(correctionTop5000)
-#[1] 5000
-
-save(correctionTop5000,file=paste0(HOME,"/20191203_top5k_correctionObject_5000cpgs_235tumors.RData"))
-
-dataTop5000<-testDat
-save(dataTop5000,file=paste0(HOME,"/20191203_top5k_testDataBetaMatrix_235withGex.RData"))
-
-dataAdjTop5000<-temp1
-save(dataAdjTop5000,file=paste0(HOME,"/20191203_top5k_testDataAdjBetaMatrix_235withGex.RData"))
-
-rm(correctionTop5000,dataTop5000,dataAdjTop5000)
 
 ################################################################################
 ### Do comparative plots
+
+
 
 ##check stats
 testDat<-do.call("rbind",lapply(res,function(x) x$y.orig))
