@@ -604,33 +604,44 @@ dev.off()
 
 ##Panel 1 - BRCA1 vs Infiltration
 
-
 ##Panel 2 - Schematic flexmix identify populations - infer pure tumor + infer normal
-
-
-
 
 
 ################################################################################
 ################################################################################
 ##Create Fig 2 panels and image
 
-##Panel 1 - 
+##Panel 1 - Adj clust 500 p x 100 rnd iter - 2 group solution - 1 example
 
+##Panel 2 - Discrimination Basal-Luminal | Adj vs dichotomized vs none
 
 ################################################################################
 ################################################################################
 ##Create Fig 3 panels and image
 
-##Panel 1 - 
+##Panel 1 - Correction top5k, unadj clust 3-panel
 
+##Panel 2 - beta density pre/post
+
+##Panel 3 - correl inferred vs actual
+
+##Panel 4 - boxplot purity 5-group adj/unadj
+
+##Panel 5 - barplot PAM50
+
+################################################################################
+################################################################################
+##Create Fig 4 panels and image
+
+##Panel 1 - Autosomes vs X?
 
 ##Panel 2 - 
 
+################################################################################
+################################################################################
+##Create Fig 5 panels and image
 
-##Panel 3 - 
-
-
+##Panel 1 - Global effect
 
 
 ################################################################################
@@ -644,60 +655,181 @@ all(rownames(betaData) %in% rownames(betaAdj))
 
 annoObj2<-annoObj[rownames(betaData),]
 betaAdj2<-betaAdj[rownames(betaData),]
+betaNorm2<-rowMeans(betaNorm[rownames(betaData),])
+beta_norm2<-rowMeans(beta_norm[rownames(betaData),],na.rm=T)
 
 medM<-apply(betaData,1,median)
 
 oe.glob<-annoObj2$weberOE
 oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=101)),include.lowest=TRUE,labels=FALSE)
 
-sel<-sample(1:length(oe.bins),50000)
-#sel<-rep(T,length(oe.bins))
-
-plot( unlist(lapply(split(medM[sel],oe.bins[sel]),mean)) ,pch=16,cex=.5,ylim=c(0,1))
 
 
-plot( unlist(lapply(split(annoObj2$cgPer100Bp[sel],oe.bins[sel]),mean)) ,pch=16,cex=.5,ylim=c(0,1))
-
-
-plot( unlist(lapply(split(rowMeans(betaData[sel,]),oe.bins[sel]),mean)) ,pch=16,cex=.5,ylim=c(0,1))
-
-plot( unlist(lapply(split(rowMeans(betaAdj2[sel,]),oe.bins[sel]),mean)) ,pch=16,cex=.5,ylim=c(0,1))
-
-plot( oe.bins[sel],rowMeans(betaData[sel,]) ,pch=16,cex=.5)
-
-
-################################################################################
-################################################################################
-
-
-par(mfrow=c(1,2))
+par(mfrow=c(2,2))
 
   oe.glob<-annoObj2$weberOE
-  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=11)),include.lowest=TRUE,labels=FALSE)
 
-  xx<-table(cut(betaData[,i],breaks=seq(0,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx<-table(cut(betaData[,i],breaks=seq(0,1,length.out=11),labels=FALSE,include.lowest=TRUE),oe.bins)
   xx[xx>250]<-250
+ plot(rowSums(xx))
+
   image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
   axes=F
   )
   axis(2,lwd=2,cex=1,font=2,las=2)
   mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
   mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+
+  oe.glob<-annoObj2$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+  #i<-1
+  xx<-table(cut(betaAdj2[,i],breaks=seq(0,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+  plot(rowSums(xx))
+
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+i<-i+1
+
+
+###
+
+par(mfrow=c(2,2))
+
+  oe.glob<-annoObj2$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+
+  xx<-table(cut(betaNorm2-beta_norm2,breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,at=seq(0,1,length.out=5),labels=seq(-1,1,length.out=5),lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+i<-96
+
+
+  oe.glob<-annoObj2$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+
+  xx<-table(cut(betaData[,i]-beta_norm2,breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+ 
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,at=seq(0,1,length.out=5),labels=seq(-1,1,length.out=5),lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+  oe.glob<-annoObj2$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+
+  xx<-table(cut(betaData[,i]-betaNorm2,breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+ 
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,at=seq(0,1,length.out=5),labels=seq(-1,1,length.out=5),lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+
+
+
+
+###
+
+par(mfrow=c(2,2))
+
+  oe.glob<-annoObj2$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+
+  xx<-table(cut(betaData[,i]-rowMeans(betaNorm2),breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+ plot(rowSums(xx))
+
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+
+  oe.glob<-annoObj2$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+  #i<-1
+  xx<-table(cut(betaAdj2[,i]-rowMeans(betaNorm2),breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+  plot(rowSums(xx))
+
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+i<-i+1
+
+
+##build plottter with row/col densities to visualize shift
+
+
+par(mfrow=c(2,2))
+
+  oe.glob<-annoObj2$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+
+  xx<-table(cut(rowMeans(betaData[,sampleAnno$pam50.full=="Basal"]),breaks=seq(0,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+ plot(rowSums(xx))
+
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
 
   oe.glob<-annoObj2$weberOE
   oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
   i<-1
-  xx<-table(cut(betaAdj2[,i],breaks=seq(0,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx<-table(cut(rowMeans(betaAdj2[,sampleAnno$pam50.full=="Basal"]),breaks=seq(0,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
   xx[xx>250]<-250
+  plot(rowSums(xx))
+
   image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
   axes=F
   )
   axis(2,lwd=2,cex=1,font=2,las=2)
   mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
   mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
 i<-i+1
 
-##build plottter with row/col densities to visualize shift
 
 ################################################################################
 ###Check correlation "inferred normal" to true normal
