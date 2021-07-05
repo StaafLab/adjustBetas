@@ -615,6 +615,361 @@ dev.off()
 
 ##Panel 2 - Discrimination Basal-Luminal | Adj vs dichotomized vs none
 
+
+##Do basal vs luminal split in 100 * 500 random CpG sets
+  ##extract -logP(fisher) hclust 2-split vs PAM50 basal-luminal
+  ##plot distribution of p-values for corrected vs uncorrected comparison
+
+all(rownames(sampleAnno)==sub("-...$","",colnames(betaData)))
+#[1] TRUE
+all(rownames(sampleAnno)==sub("-...$","",names(fracTum)))
+#[1] TRUE
+
+##number of lists
+N<-100
+resMat<-matrix(ncol=9,nrow=N,dimnames=list(1:N,paste(c("acc","sen","spe"),rep(c(".raw",".adj",".dic"),each=3),sep="")) )
+
+##generate 500 random CpG sets
+set.seed(20210705)
+varF<-apply(betaData,1,sd)
+varF<-varF > 0
+p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
+s_list<-lapply(1:N,function(x) sample(1:1e6,500) )
+
+##do multicore
+no_cores <- detectCores(logical = TRUE)
+
+cat("using", no_cores-1,"cores","\n")
+
+cl <- makeCluster(no_cores-1)  
+registerDoParallel(cl)  
+
+clusterEvalQ(cl, {
+  library("flexmix")
+})
+
+##main loop
+
+##metric
+getAcc<-function(x,ref) {   
+  a1<-sum(x==ref) / length(x)
+  a1<-c( a1 , sum( abs(3-x) == ref ) / length(x) )
+  a1[which.max(a1)]
+}
+getSens<-function(x,ref) {   
+  a1<-sum(x==2 & ref==2 ) / sum( ref==2 )
+  a1<-c( a1 , sum(abs(3-x)==2 & ref==2 ) / sum( ref==2 ) )
+  a1[which.max(a1)]
+}
+getSpec<-function(x,ref) {   
+  a1<-sum(x!=2 & ref!=2 ) / sum( ref!=2 )
+  a1<-c( a1 , sum(abs(3-x)!=2 & ref!=2 ) / sum( ref!=2 ) )
+  a1[which.max(a1)]
+}
+
+set.seed(20210705)
+for (i in 1:N) {
+  cat(i," of ",N,"\n")
+  ##betaData filtered for chrX/Y
+  betaRun<-cbind(seed=s_list[[i]],betaData[p_list[[i]],])
+  betaNames<-colnames(betaData)
+  b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+  ##adjusted
+  b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
+    b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
+    b1<-cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2)
+    ##unadjusted
+    b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
+    b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
+    b2<-cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2)
+    ##dichotomized
+    b3<-do.call("rbind",lapply(b,function(x) x$y.orig>.3))
+    b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
+    b3<-cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2)
+#     resMat[i,1]<- -log10(fisher.test(table(b2,sampleAnno$pam50.full != "Basal"))$p.value)
+#     resMat[i,2]<- -log10(fisher.test(table(b1,sampleAnno$pam50.full != "Basal"))$p.value)
+#     resMat[i,3]<- -log10(fisher.test(table(b3,sampleAnno$pam50.full != "Basal"))$p.value)
+  resMat[i,"acc.raw"]<-getAcc(b2,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"sen.raw"]<-getSens(b2,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"spe.raw"]<-getSpec(b2,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"acc.adj"]<-getAcc(b1,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"sen.adj"]<-getSens(b1,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"spe.adj"]<-getSpec(b1,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"acc.dic"]<-getAcc(b3,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"sen.dic"]<-getSens(b3,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"spe.dic"]<-getSpec(b3,1+as.integer(sampleAnno$pam50.full == "Basal") )
+}
+rm(b,b1,b2,b3,i,N,cl,betaRun,betaNames,getAcc,getSens,getSpec)
+
+save(p_list,file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_usedProbeSets.RData"))
+rm(p_list)
+save(s_list,file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_usedRngSeeds.RData"))
+rm(s_list)
+save(resMat,file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_runResults.RData"))
+#rm(resMat)
+
+
+
+
+
+
+pdf(paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets.pdf"),width=8,height=8,useDingbats=F)
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+
+plot(density(resMat[,2]),xlim=c(-5,max(resMat)+c(5)),pch=16,cex=2,cex.lab=1.6,cex.main=2
+  ,main="Discrimination of PAM50 Basal vs Rest split"
+  ,xlab="-log10(p,Fisher test), 100 iterations",ylab="Density"
+  ,type="n",las=1,axes=F,
+  ylim=c(0,max( c(density(resMat[,1])$y,density(resMat[,2])$y,density(resMat[,3])$y) ) )
+)
+lines(density(resMat[,1]),col="grey",lwd=3)
+lines(density(resMat[,2]),col=1,lwd=3)
+lines(density(resMat[,3]),col=2,lwd=3)
+
+abline(v=median(resMat[,1]),lwd=3,col="grey",lty=2)
+abline(v=median(resMat[,2]),lwd=3,col=1,lty=2)
+abline(v=median(resMat[,3]),lwd=3,col=2,lty=2)
+abline(h=0,lwd=3,col=1)
+
+legend("topright",legend=c("unadjusted beta","adjusted beta","dichotomized beta"),col=c("grey",1,2),lwd=3,bty="n",cex=1.6)
+
+axis(1,lwd=2,las=1,cex.axis=1.6)
+axis(2,lwd=2,las=1,cex.axis=1.6)
+dev.off()
+
+save(resMat,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
+rm(resMat)
+
+rm(varF)
+
+################################################################################  ##HERE!!!
+###Do plot with one of the random 500 iterations
+
+##4 figure panels
+  ##1. heatmap uncorrected
+  ##2. heatmap corrected
+  ##3. alluvial 4-g
+  ##.4 basal/luminal v 2-group
+
+##choose one of the random iters
+  ##best change pre-post?!
+load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
+
+load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
+
+iii<-which.max( resMat[,2]-resMat[,1] )
+iii<-p_list[[iii]]
+
+##do multicore
+no_cores <- detectCores(logical = TRUE)
+
+cat("using", no_cores-1,"cores","\n")
+
+cl <- makeCluster(no_cores-1)  
+registerDoParallel(cl)  
+
+clusterEvalQ(cl, {
+  library("flexmix")
+})
+
+set.seed(12345)
+betaRun<-cbind(seed=sample(length(iii)),betaData[iii,samples_use])
+betaNames<-samples_use
+b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+
+rm(resMat,iii,p_list,betaRun,betaNames)
+
+##adjusted
+b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
+
+##unadjusted
+b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
+
+
+##do clustering
+c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
+c2<-unique(c1[hclust( as.dist( 1-cor(b1) ),method="ward.D")$order])
+r1<-hclust( dist(b2),method="ward.D") ##do rowclusters based on unadj data
+c3<-hclust( as.dist( 1-cor(b1) ),method="ward.D")
+c4<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
+c5<-hclust( as.dist( 1-cor(b2) ),method="ward.D")
+
+c1<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c1)))))
+c4<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c4)))))
+
+sample_anno<-data.frame(adj500=c1,
+  unadj500=c4,
+  AIMS=tnbcClass$PAM50_AIMS
+  #TNBC=tnbcClass$TNBCtype
+  #umap=factor(clusters.umap[samples_use,"class"]),
+  #hrd3=factor(clinAnno[samples_use,"HRD.3"])
+  )
+rownames(sample_anno)<-samples_use
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+my_colour = list(unadj500=c("a"="#E41A1C","b"="#377EB8"),
+    adj500=c("a"="#E41A1C","b"="#377EB8"),
+    #adj5000=c("a"="red","b"="pink","c"="darkgreen","d"="orange","e"="grey"),
+    #umap = c("1" = "#5977ff", "2" = "#f74747"),
+    AIMS = c("Basal" = "red" , "Her2" = "pink" , "LumA" = "darkgreen" , "LumB" = "orange" , "Normal" = "grey")
+    #TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
+    #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
+  )
+
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+pheatmap(b1,cluster_rows = r1,cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="",fontsize=18,cutree_cols=2
+  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
+  ,treeheight_row=0,treeheight_col=0,legend=F
+)
+dev.off()
+
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+pheatmap(b1,cluster_rows = r1,cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="",fontsize=18,cutree_cols=2
+  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=TRUE,annotation_names_col=F
+  ,treeheight_row=0,treeheight_col=0,legend=F
+)
+dev.off()
+
+##do clustering
+c1<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
+c2<-unique(c1[hclust( as.dist( 1-cor(b2) ),method="ward.D")$order])
+r1<-hclust( dist(b2),method="ward.D")
+c3<-hclust( as.dist( 1-cor(b2) ),method="ward.D")
+c4<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
+
+c1<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c1)))))
+c4<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c4)))))
+
+sample_anno<-data.frame(unadj500=c1,
+  adj500=c4,
+  AIMS=tnbcClass$PAM50_AIMS
+  #TNBC=tnbcClass$TNBCtype
+  #umap=factor(clusters.umap[samples_use,"class"]),
+  #hrd3=factor(clinAnno[samples_use,"HRD.3"])
+  )
+rownames(sample_anno)<-samples_use
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+pheatmap(b2,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="",cutree_cols=2,fontsize=18
+  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
+  ,treeheight_row=0,treeheight_col=0,legend=F
+)
+dev.off()
+
+##alluvial of results
+c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
+unique(c1[hclust( as.dist( 1-cor(b1) ),method="ward.D")$order])
+#[1] 2 1 
+c1<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
+unique(c1[hclust( as.dist( 1-cor(b2) ),method="ward.D")$order])
+#[1] 2 1
+
+cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2),
+  adjusted=letters[1:2][cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)]
+  ),stringsAsFactors=F)
+
+table(cl$unadjusted,cl$adjusted)
+  #     a   b
+  # 1 169  19
+  # 2  19  28
+
+cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
+cl$Var2<-factor(cl$Var2,levels=c("b","a"))
+cl$Var1<-factor(cl$Var1,levels=c("2","1"))
+
+(pal2<-brewer.pal(5,"Set1")[c(2,1)])
+(pal<-brewer.pal(5,"Set1")[c(2,1)])
+
+pal<-rev(pal)
+pal2<-rev(pal2)
+
+q<-ggplot(cl,
+       aes(y = Freq,
+           axis1 = Var1, axis2 = Var2,)) +
+  geom_alluvium(aes(fill = Var1 ),alpha=.75,       #fill = Var1
+                width = 0, knot.pos = 1/5, reverse = TRUE
+                ) +
+  guides(fill = FALSE) +
+  geom_stratum(width = 1/20, reverse = TRUE,colour=c(pal,pal2),fill=c(pal,pal2)) +
+  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("b","a")),rev(c("b","a")))
+    ) +
+  scale_x_continuous(breaks = 1:2, labels = c("unadjusted", "adjusted")) +
+  scale_fill_manual(values=rev(pal)) +
+  #scale_fill_manual(values=rep("lightgrey",5)) +
+  #coord_flip() +
+  #restitle("") +
+  theme_bw() +
+  theme(axis.line = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    axis.title.x=element_blank(),
+    axis.text.x=element_blank(),
+    axis.ticks.x=element_blank(),
+    axis.title.y=element_blank(),
+    axis.text.y=element_blank(),
+    axis.ticks.y=element_blank()
+    )
+
+pdf(paste0(HOME,"/20191203_random500_alluvial_pear_eucl_hClust_unadjBeta_to_adjBeta.pdf"),width=12,height=12,useDingbats=F)
+q
+dev.off()
+rm(q)
+
+a2<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
+a1<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
+
+a11<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
+
+a11<-image_crop(a11,"1000x6000+4300")
+
+tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
+par(mar=c(0,0,0,0))
+plot(1,type="n",axes=F,xlab="",ylab="")
+dev.off()
+a9<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"))
+
+out<-image_append(c(a9,
+  a1,
+  a9,
+  a2,
+  a9,
+  a11
+  ),stack = F)
+out<-image_scale(out,"6000x")
+
+image_write(out, path = paste0(HOME,"/20191215_random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
+
+rm(a1,a2,a9,a11,out)
+rm(c1,c2,c3,c4,c5,r1,b,b1,b2)
+
+gc()
+
+rm(cl)
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+################################################################################
+
 ################################################################################
 ################################################################################
 ##Create Fig 3 panels and image
@@ -1462,313 +1817,6 @@ dev.off()
 
 rm(sf)
 
-################################################################################
-###Do basal vs luminal split in 100 * 500 random CpG sets
-  ##extract -logP(fisher) hclust 2-split vs PAM50 basal-luminal
-  ##plot distribution of p-values for corrected vs uncorrected comparison
-
-##number of lists
-N<-100
-resMat<-matrix(ncol=3,nrow=N,dimnames=list(1:N,c("p.raw","p.adj","p.dic")))
-
-# ##generate 500 random CpG sets
-# set.seed(20191214)
-# varF<-apply(betaData[,samples_use],1,sd)
-# varF<-varF > quantile(varF,.5)
-# p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
-
-##generate 500 random CpG sets
-set.seed(20200904)
-varF<-apply(betaData[,samples_use],1,sd)
-varF<-varF > 0
-p_list<-lapply(1:N,function(x) sample(rownames(betaData)[varF],500) )
-
-##do multicore
-no_cores <- detectCores(logical = TRUE)
-
-cat("using", no_cores-1,"cores","\n")
-
-cl <- makeCluster(no_cores-1)  
-registerDoParallel(cl)  
-
-clusterEvalQ(cl, {
-  library("flexmix")
-})
-
-#clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
-
-set.seed(20201011)
-
-for (i in 1:N) {
- 	cat(i," of ",N,"\n")
- 	##betaData filtered for chrX/Y
- 	betaRun<-cbind(seed=sample(length(p_list[[i]])),betaData[p_list[[i]],samples_use])
-	betaNames<-samples_use
-	b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
- 	#b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
-	##adjusted
-	b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
-  	b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
-  	b1<-cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2)
-  	##unadjusted
-  	b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
-  	b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
-  	b2<-cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2)
-  	##dichotomized
-  	b3<-do.call("rbind",lapply(b,function(x) x$y.orig>.3))
-  	b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
-  	b3<-cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2)
-
-  	resMat[i,1]<- -log10(fisher.test(table(b2,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
-  	resMat[i,2]<- -log10(fisher.test(table(b1,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
-  	resMat[i,3]<- -log10(fisher.test(table(b3,tnbcClass$PAM50_AIMS != "Basal"))$p.value)
-}
-rm(b,b1,b2,b3,i,N,cl,betaRun,betaNames)
-
-save(p_list,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
-rm(p_list)
-
-pdf(paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets.pdf"),width=8,height=8,useDingbats=F)
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
-
-plot(density(resMat[,2]),xlim=c(-5,max(resMat)+c(5)),pch=16,cex=2,cex.lab=1.6,cex.main=2
-  ,main="Discrimination of PAM50 Basal vs Rest split"
-  ,xlab="-log10(p,Fisher test), 100 iterations",ylab="Density"
-  ,type="n",las=1,axes=F,
-  ylim=c(0,max( c(density(resMat[,1])$y,density(resMat[,2])$y,density(resMat[,3])$y) ) )
-)
-lines(density(resMat[,1]),col="grey",lwd=3)
-lines(density(resMat[,2]),col=1,lwd=3)
-lines(density(resMat[,3]),col=2,lwd=3)
-
-abline(v=median(resMat[,1]),lwd=3,col="grey",lty=2)
-abline(v=median(resMat[,2]),lwd=3,col=1,lty=2)
-abline(v=median(resMat[,3]),lwd=3,col=2,lty=2)
-abline(h=0,lwd=3,col=1)
-
-legend("topright",legend=c("unadjusted beta","adjusted beta","dichotomized beta"),col=c("grey",1,2),lwd=3,bty="n",cex=1.6)
-
-axis(1,lwd=2,las=1,cex.axis=1.6)
-axis(2,lwd=2,las=1,cex.axis=1.6)
-dev.off()
-
-save(resMat,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
-rm(resMat)
-
-rm(varF)
-
-################################################################################  ##HERE!!!
-###Do plot with one of the random 500 iterations
-
-##4 figure panels
-  ##1. heatmap uncorrected
-  ##2. heatmap corrected
-  ##3. alluvial 4-g
-  ##.4 basal/luminal v 2-group
-
-##choose one of the random iters
-  ##best change pre-post?!
-load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
-
-load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
-
-iii<-which.max( resMat[,2]-resMat[,1] )
-iii<-p_list[[iii]]
-
-##do multicore
-no_cores <- detectCores(logical = TRUE)
-
-cat("using", no_cores-1,"cores","\n")
-
-cl <- makeCluster(no_cores-1)  
-registerDoParallel(cl)  
-
-clusterEvalQ(cl, {
-  library("flexmix")
-})
-
-set.seed(12345)
-betaRun<-cbind(seed=sample(length(iii)),betaData[iii,samples_use])
-betaNames<-samples_use
-b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
-
-rm(resMat,iii,p_list,betaRun,betaNames)
-
-##adjusted
-b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
-
-##unadjusted
-b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
-
-
-##do clustering
-c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
-c2<-unique(c1[hclust( as.dist( 1-cor(b1) ),method="ward.D")$order])
-r1<-hclust( dist(b2),method="ward.D") ##do rowclusters based on unadj data
-c3<-hclust( as.dist( 1-cor(b1) ),method="ward.D")
-c4<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
-c5<-hclust( as.dist( 1-cor(b2) ),method="ward.D")
-
-c1<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c1)))))
-c4<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c4)))))
-
-sample_anno<-data.frame(adj500=c1,
-  unadj500=c4,
-  AIMS=tnbcClass$PAM50_AIMS
-  #TNBC=tnbcClass$TNBCtype
-  #umap=factor(clusters.umap[samples_use,"class"]),
-  #hrd3=factor(clinAnno[samples_use,"HRD.3"])
-  )
-rownames(sample_anno)<-samples_use
-sample_anno<-sample_anno[,ncol(sample_anno):1]
-
-my_colour = list(unadj500=c("a"="#E41A1C","b"="#377EB8"),
-    adj500=c("a"="#E41A1C","b"="#377EB8"),
-    #adj5000=c("a"="red","b"="pink","c"="darkgreen","d"="orange","e"="grey"),
-    #umap = c("1" = "#5977ff", "2" = "#f74747"),
-    AIMS = c("Basal" = "red" , "Her2" = "pink" , "LumA" = "darkgreen" , "LumB" = "orange" , "Normal" = "grey")
-    #TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
-    #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
-  )
-
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(b1,cluster_rows = r1,cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="",fontsize=18,cutree_cols=2
-  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
-  ,treeheight_row=0,treeheight_col=0,legend=F
-)
-dev.off()
-
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(b1,cluster_rows = r1,cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="",fontsize=18,cutree_cols=2
-  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=TRUE,annotation_names_col=F
-  ,treeheight_row=0,treeheight_col=0,legend=F
-)
-dev.off()
-
-##do clustering
-c1<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
-c2<-unique(c1[hclust( as.dist( 1-cor(b2) ),method="ward.D")$order])
-r1<-hclust( dist(b2),method="ward.D")
-c3<-hclust( as.dist( 1-cor(b2) ),method="ward.D")
-c4<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
-
-c1<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c1)))))
-c4<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c4)))))
-
-sample_anno<-data.frame(unadj500=c1,
-  adj500=c4,
-  AIMS=tnbcClass$PAM50_AIMS
-  #TNBC=tnbcClass$TNBCtype
-  #umap=factor(clusters.umap[samples_use,"class"]),
-  #hrd3=factor(clinAnno[samples_use,"HRD.3"])
-  )
-rownames(sample_anno)<-samples_use
-sample_anno<-sample_anno[,ncol(sample_anno):1]
-
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(b2,cluster_rows = r1, cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="",cutree_cols=2,fontsize=18
-  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
-  ,treeheight_row=0,treeheight_col=0,legend=F
-)
-dev.off()
-
-##alluvial of results
-c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
-unique(c1[hclust( as.dist( 1-cor(b1) ),method="ward.D")$order])
-#[1] 2 1 
-c1<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
-unique(c1[hclust( as.dist( 1-cor(b2) ),method="ward.D")$order])
-#[1] 2 1
-
-cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2),
-  adjusted=letters[1:2][cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)]
-  ),stringsAsFactors=F)
-
-table(cl$unadjusted,cl$adjusted)
-  #     a   b
-  # 1 169  19
-  # 2  19  28
-
-cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
-cl$Var2<-factor(cl$Var2,levels=c("b","a"))
-cl$Var1<-factor(cl$Var1,levels=c("2","1"))
-
-(pal2<-brewer.pal(5,"Set1")[c(2,1)])
-(pal<-brewer.pal(5,"Set1")[c(2,1)])
-
-pal<-rev(pal)
-pal2<-rev(pal2)
-
-q<-ggplot(cl,
-       aes(y = Freq,
-           axis1 = Var1, axis2 = Var2,)) +
-  geom_alluvium(aes(fill = Var1 ),alpha=.75,       #fill = Var1
-                width = 0, knot.pos = 1/5, reverse = TRUE
-                ) +
-  guides(fill = FALSE) +
-  geom_stratum(width = 1/20, reverse = TRUE,colour=c(pal,pal2),fill=c(pal,pal2)) +
-  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("b","a")),rev(c("b","a")))
-    ) +
-  scale_x_continuous(breaks = 1:2, labels = c("unadjusted", "adjusted")) +
-  scale_fill_manual(values=rev(pal)) +
-  #scale_fill_manual(values=rep("lightgrey",5)) +
-  #coord_flip() +
-  #restitle("") +
-  theme_bw() +
-  theme(axis.line = element_blank(),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.border = element_blank(),
-    panel.background = element_blank(),
-    axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.title.y=element_blank(),
-    axis.text.y=element_blank(),
-    axis.ticks.y=element_blank()
-    )
-
-pdf(paste0(HOME,"/20191203_random500_alluvial_pear_eucl_hClust_unadjBeta_to_adjBeta.pdf"),width=12,height=12,useDingbats=F)
-q
-dev.off()
-rm(q)
-
-a2<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
-a1<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
-
-a11<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
-
-a11<-image_crop(a11,"1000x6000+4300")
-
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
-par(mar=c(0,0,0,0))
-plot(1,type="n",axes=F,xlab="",ylab="")
-dev.off()
-a9<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"))
-
-out<-image_append(c(a9,
-  a1,
-  a9,
-  a2,
-  a9,
-  a11
-  ),stack = F)
-out<-image_scale(out,"6000x")
-
-image_write(out, path = paste0(HOME,"/20191215_random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
-
-rm(a1,a2,a9,a11,out)
-rm(c1,c2,c3,c4,c5,r1,b,b1,b2)
-
-gc()
-
-rm(cl)
 
 ################################################################################
 ###Crop previous double image for new plot
