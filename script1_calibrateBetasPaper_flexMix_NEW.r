@@ -708,39 +708,220 @@ rm(s_list)
 save(resMat,file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_runResults.RData"))
 #rm(resMat)
 
+rm(varF)
 
+################################################################################
+################################################################################
+###redo plot for rand500 iterations
 
+##track sens+spec+acc for all iter
 
+# load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
 
+# ##do multicore
+# no_cores <- detectCores(logical = TRUE)
 
-pdf(paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets.pdf"),width=8,height=8,useDingbats=F)
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
+# cat("using", no_cores-1,"cores","\n")
 
-plot(density(resMat[,2]),xlim=c(-5,max(resMat)+c(5)),pch=16,cex=2,cex.lab=1.6,cex.main=2
-  ,main="Discrimination of PAM50 Basal vs Rest split"
-  ,xlab="-log10(p,Fisher test), 100 iterations",ylab="Density"
-  ,type="n",las=1,axes=F,
-  ylim=c(0,max( c(density(resMat[,1])$y,density(resMat[,2])$y,density(resMat[,3])$y) ) )
+# cl <- makeCluster(no_cores-1)  
+# registerDoParallel(cl)  
+
+# clusterEvalQ(cl, {
+#   library("flexmix")
+# })
+
+# #clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
+
+# resMat2<-matrix(nrow=length(p_list),ncol=9)
+# colnames(resMat2)<-c("rawAcc","rawSens","rawSpec",
+#   "adjAcc","adjSens","adjSpec",
+#   "binAcc","binSens","binSpec")
+
+# set.seed(201012)
+# refStat<-factor(1+(tnbcClass$PAM50_AIMS != "Basal"))
+# for( i in 1:length(p_list)) {
+#      cat(".")
+#      if(i%%10==0)  cat(" ",i,"\n")
+
+#     ##betaData filtered for chrX/Y
+#   betaRun<-cbind(seed=sample(length(p_list[[i]])),betaData[p_list[[i]],samples_use])
+#   betaNames<-samples_use
+#   b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+#     #b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
+
+#      ##unadjusted
+#      b1<-do.call("rbind",lapply(b,function(x) x$y.orig))
+#      b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
+#      b1<-factor(cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2))
+#      r1<-confusionMatrix(b1,reference=refStat)
+#      r1<-c(r1$overall[1],r1$byClass[1:2])
+#      r1<-rbind(r1,1-r1)
+#      r1<-r1[which.max(r1[,1]),]
+#      resMat2[i,1:3]<-as.numeric(r1)
+#      ##adjusted
+#      b2<-do.call("rbind",lapply(b,function(x) x$y.tum))
+#      b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
+#      b2<-factor(cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2))
+#      r1<-confusionMatrix(b2,reference=refStat)
+#      r1<-c(r1$overall[1],r1$byClass[1:2])
+#      r1<-rbind(r1,1-r1)
+#      r1<-r1[which.max(r1[,1]),]
+#      resMat2[i,4:6]<-as.numeric(r1)
+#      ##dichotomized
+#      b3<-do.call("rbind",lapply(b,function(x) x$y.orig > .3))
+#      b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
+#      b3<-factor(cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2))
+#      r1<-confusionMatrix(b3,reference=refStat)
+#      r1<-c(r1$overall[1],r1$byClass[1:2])
+#      r1<-rbind(r1,1-r1)
+#      r1<-r1[which.max(r1[,1]),]
+#      resMat2[i,7:9]<-as.numeric(r1)
+# }     
+     
+# rm(i,p_list,b,b1,b2,b3,r1,refStat,cl,betaRun,betaNames)
+
+resMat2<-resMat
+
+pdf(paste0(HOME,"/top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
+par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
+
+boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
+  main="Discrimination of PAM50 Basal vs Luminal split"
 )
-lines(density(resMat[,1]),col="grey",lwd=3)
-lines(density(resMat[,2]),col=1,lwd=3)
-lines(density(resMat[,3]),col=2,lwd=3)
+abline(h=0,lwd=3,col="lightgrey",lty=2)
+boxplot(resMat2[,7]-resMat2[,1],at=2,add=T,width=2,axes=F,lwd=2)
 
-abline(v=median(resMat[,1]),lwd=3,col="grey",lty=2)
-abline(v=median(resMat[,2]),lwd=3,col=1,lty=2)
-abline(v=median(resMat[,3]),lwd=3,col=2,lty=2)
-abline(h=0,lwd=3,col=1)
+boxplot(resMat2[,5]-resMat2[,2],at=4,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
 
-legend("topright",legend=c("unadjusted beta","adjusted beta","dichotomized beta"),col=c("grey",1,2),lwd=3,bty="n",cex=1.6)
+boxplot(resMat2[,6]-resMat2[,3],at=7,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9]-resMat2[,3],at=8,add=T,width=2,axes=F,lwd=2)
 
-axis(1,lwd=2,las=1,cex.axis=1.6)
-axis(2,lwd=2,las=1,cex.axis=1.6)
+axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+  labels=c("Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3")
+)
+axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
+mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
+lines(x=c(1,2),y=c(.85,.85),lwd=3)
+text(1.5,.85,labels="Accuracy",pos=3)
+
+lines(x=c(4,5),y=c(.85,.85),lwd=3)
+text(4.5,.85,labels="Sensitivity",pos=3)
+
+lines(x=c(7,8),y=c(.85,.85),lwd=3)
+text(7.5,.85,labels="Specificity",pos=3)
+
+##absolute terms
+par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
+
+boxplot(resMat2[,4],at=1,xlim=c(0.5,8.5),ylim=c(0,1),width=2,axes=F,lwd=2,
+  main="Discrimination of PAM50 Basal vs Luminal split"
+)
+#abline(h=0,lwd=3,col="lightgrey",lty=2)
+boxplot(resMat2[,7],at=2,add=T,width=2,axes=F,lwd=2)
+
+boxplot(resMat2[,5],at=4,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8],at=5,add=T,width=2,axes=F,lwd=2)
+
+boxplot(resMat2[,6],at=7,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9],at=8,add=T,width=2,axes=F,lwd=2)
+
+axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+  labels=c("Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3")
+)
+axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
+mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
+lines(x=c(1,2),y=c(.05,.05),lwd=3)
+text(1.5,.05,labels="Accuracy",pos=3)
+
+lines(x=c(4,5),y=c(.05,.05),lwd=3)
+text(4.5,.05,labels="Sensitivity",pos=3)
+
+lines(x=c(7,8),y=c(.05,.05),lwd=3)
+text(7.5,.05,labels="Specificity",pos=3)
+
 dev.off()
 
-save(resMat,file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
-rm(resMat)
+##deltas - adj.
+t.test(resMat2[,4]-resMat2[,1])
+#         One Sample t-test
+# data:  resMat2[, 4] - resMat2[, 1]
+# t = 12.074, df = 99, p-value < 2.2e-16
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  0.1713949 0.2388067
+# sample estimates:
+# mean of x 
+# 0.2051008 
 
-rm(varF)
+t.test(resMat2[,5]-resMat2[,2])
+#         One Sample t-test
+# data:  resMat2[, 5] - resMat2[, 2]
+# t = -3.8434, df = 99, p-value = 0.0002144
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  -0.03510622 -0.01120009
+# sample estimates:
+#   mean of x 
+# -0.02315315 
+
+t.test(resMat2[,6]-resMat2[,3])
+#         One Sample t-test
+# data:  resMat2[, 6] - resMat2[, 3]
+# t = 12.779, df = 99, p-value < 2.2e-16
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  0.1806363 0.2470416
+# sample estimates:
+# mean of x 
+#  0.213839 
+
+
+##deltas - beta>.3
+t.test(resMat2[,7]-resMat2[,1])
+#         One Sample t-test
+# data:  resMat2[, 7] - resMat2[, 1]
+# t = -5.708, df = 99, p-value = 1.196e-07
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  -0.15162318 -0.07340008
+# sample estimates:
+#  mean of x 
+# -0.1125116 
+
+t.test(resMat2[,8]-resMat2[,2])
+#         One Sample t-test
+# data:  resMat2[, 8] - resMat2[, 2]
+# t = -3.4575, df = 99, p-value = 0.0008051
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  -0.08025412 -0.02172786
+# sample estimates:
+#   mean of x 
+# -0.05099099 
+
+t.test(resMat2[,9]-resMat2[,3])
+#         One Sample t-test
+# data:  resMat2[, 9] - resMat2[, 3]
+# t = -5.0373, df = 99, p-value = 2.126e-06
+# alternative hypothesis: true mean is not equal to 0
+# 95 percent confidence interval:
+#  -0.13936428 -0.06059827
+# sample estimates:
+#   mean of x 
+# -0.09998127 
+
+rm(resMat2)
 
 ################################################################################  ##HERE!!!
 ###Do plot with one of the random 500 iterations
@@ -751,13 +932,14 @@ rm(varF)
   ##3. alluvial 4-g
   ##.4 basal/luminal v 2-group
 
-##choose one of the random iters
+##choose one of the random iters by accuracy
   ##best change pre-post?!
-load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_FisherPVals.RData"))
+load(file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_usedProbeSets.RData"))
 
-load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
+load(file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_usedRngSeeds.RData"))
 
-iii<-which.max( resMat[,2]-resMat[,1] )
+iii<-which.max( resMat[,4]-resMat[,1] )
+s_list<-s_list[[iii]]
 iii<-p_list[[iii]]
 
 ##do multicore
@@ -772,19 +954,18 @@ clusterEvalQ(cl, {
   library("flexmix")
 })
 
-set.seed(12345)
-betaRun<-cbind(seed=sample(length(iii)),betaData[iii,samples_use])
-betaNames<-samples_use
+betaRun<-cbind(seed=s_list,betaData[iii,])
+betaNames<-colnames(betaData)
 b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
 
-rm(resMat,iii,p_list,betaRun,betaNames)
+rm(iii,p_list,s_list,betaRun,betaNames)
+
+##do heatmap
 
 ##adjusted
 b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
-
 ##unadjusted
 b2<-do.call("rbind",lapply(b,function(x) x$y.orig))
-
 
 ##do clustering
 c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
@@ -794,29 +975,26 @@ c3<-hclust( as.dist( 1-cor(b1) ),method="ward.D")
 c4<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
 c5<-hclust( as.dist( 1-cor(b2) ),method="ward.D")
 
-c1<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c1)))))
-c4<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c4)))))
-
-sample_anno<-data.frame(adj500=c1,
-  unadj500=c4,
-  AIMS=tnbcClass$PAM50_AIMS
+sample_anno<-data.frame(adj500=as.character(c1),
+  unadj500=as.character(c4),
+  PAM50=sampleAnno$pam50.full
   #TNBC=tnbcClass$TNBCtype
   #umap=factor(clusters.umap[samples_use,"class"]),
   #hrd3=factor(clinAnno[samples_use,"HRD.3"])
   )
-rownames(sample_anno)<-samples_use
+rownames(sample_anno)<-colnames(betaData)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj500=c("a"="#E41A1C","b"="#377EB8"),
-    adj500=c("a"="#E41A1C","b"="#377EB8"),
+my_colour = list(unadj500=c("1"="#E41A1C","2"="#377EB8"),
+    adj500=c("1"="#E41A1C","2"="#377EB8"),
     #adj5000=c("a"="red","b"="pink","c"="darkgreen","d"="orange","e"="grey"),
     #umap = c("1" = "#5977ff", "2" = "#f74747"),
-    AIMS = c("Basal" = "red" , "Her2" = "pink" , "LumA" = "darkgreen" , "LumB" = "orange" , "Normal" = "grey")
+    PAM50 = c("Basal" = "red" , "Her2" = "pink" , "LumA" = "darkgreen" , "LumB" = "orange" , "Normal" = "grey")
     #TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b1,cluster_rows = r1,cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",fontsize=18,cutree_cols=2
@@ -825,7 +1003,7 @@ pheatmap(b1,cluster_rows = r1,cluster_cols = c3
 )
 dev.off()
 
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b1,cluster_rows = r1,cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",fontsize=18,cutree_cols=2
@@ -841,20 +1019,17 @@ r1<-hclust( dist(b2),method="ward.D")
 c3<-hclust( as.dist( 1-cor(b2) ),method="ward.D")
 c4<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
 
-c1<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c1)))))
-c4<-sub("5","e",sub("4","d",sub("3","c",sub("2","b",sub("1","a",c4)))))
-
-sample_anno<-data.frame(unadj500=c1,
-  adj500=c4,
-  AIMS=tnbcClass$PAM50_AIMS
+sample_anno<-data.frame(unadj500=as.character(c1),
+  adj500=as.character(c4),
+  PAM50=sampleAnno$pam50.full
   #TNBC=tnbcClass$TNBCtype
   #umap=factor(clusters.umap[samples_use,"class"]),
   #hrd3=factor(clinAnno[samples_use,"HRD.3"])
   )
-rownames(sample_anno)<-samples_use
+rownames(sample_anno)<-colnames(betaData)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=2,fontsize=18
@@ -863,79 +1038,20 @@ pheatmap(b2,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
-##alluvial of results
-c1<-cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)
-unique(c1[hclust( as.dist( 1-cor(b1) ),method="ward.D")$order])
-#[1] 2 1 
-c1<-cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2)
-unique(c1[hclust( as.dist( 1-cor(b2) ),method="ward.D")$order])
-#[1] 2 1
+##do composite plot
 
-cl<-as.data.frame(cbind(unadjusted=cutree( hclust( as.dist( 1-cor(b2) ),method="ward.D"),2),
-  adjusted=letters[1:2][cutree( hclust( as.dist( 1-cor(b1) ),method="ward.D"),2)]
-  ),stringsAsFactors=F)
+a2<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
+a1<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
 
-table(cl$unadjusted,cl$adjusted)
-  #     a   b
-  # 1 169  19
-  # 2  19  28
-
-cl<-as.data.frame(table(cl$unadjusted,cl$adjusted))
-cl$Var2<-factor(cl$Var2,levels=c("b","a"))
-cl$Var1<-factor(cl$Var1,levels=c("2","1"))
-
-(pal2<-brewer.pal(5,"Set1")[c(2,1)])
-(pal<-brewer.pal(5,"Set1")[c(2,1)])
-
-pal<-rev(pal)
-pal2<-rev(pal2)
-
-q<-ggplot(cl,
-       aes(y = Freq,
-           axis1 = Var1, axis2 = Var2,)) +
-  geom_alluvium(aes(fill = Var1 ),alpha=.75,       #fill = Var1
-                width = 0, knot.pos = 1/5, reverse = TRUE
-                ) +
-  guides(fill = FALSE) +
-  geom_stratum(width = 1/20, reverse = TRUE,colour=c(pal,pal2),fill=c(pal,pal2)) +
-  geom_text(stat = "stratum", infer.label = F, reverse = TRUE,size=10,fontface="bold",label=c(rev(c("b","a")),rev(c("b","a")))
-    ) +
-  scale_x_continuous(breaks = 1:2, labels = c("unadjusted", "adjusted")) +
-  scale_fill_manual(values=rev(pal)) +
-  #scale_fill_manual(values=rep("lightgrey",5)) +
-  #coord_flip() +
-  #restitle("") +
-  theme_bw() +
-  theme(axis.line = element_blank(),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.border = element_blank(),
-    panel.background = element_blank(),
-    axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.title.y=element_blank(),
-    axis.text.y=element_blank(),
-    axis.ticks.y=element_blank()
-    )
-
-pdf(paste0(HOME,"/20191203_random500_alluvial_pear_eucl_hClust_unadjBeta_to_adjBeta.pdf"),width=12,height=12,useDingbats=F)
-q
-dev.off()
-rm(q)
-
-a2<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
-a1<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
-
-a11<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
+a11<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
 
 a11<-image_crop(a11,"1000x6000+4300")
 
-tiff(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
 par(mar=c(0,0,0,0))
 plot(1,type="n",axes=F,xlab="",ylab="")
 dev.off()
-a9<-image_read(paste0(HOME,"/20191215_random500_heatmap_noAnno_white.tiff"))
+a9<-image_read(paste0(HOME,"/random500_heatmap_noAnno_white.tiff"))
 
 out<-image_append(c(a9,
   a1,
@@ -946,29 +1062,25 @@ out<-image_append(c(a9,
   ),stack = F)
 out<-image_scale(out,"6000x")
 
-image_write(out, path = paste0(HOME,"/20191215_random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
+image_write(out, path = paste0(HOME,"/random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
 
 rm(a1,a2,a9,a11,out)
-rm(c1,c2,c3,c4,c5,r1,b,b1,b2)
+rm(c1,c2,c3,c4,c5,r1,b,b1,b2,cl)
 
 gc()
 
-rm(cl)
-
-
-
-
-
-
-
-
-
-
-
-
-
 ################################################################################
 ################################################################################
+
+
+
+
+
+
+
+
+
+
 
 ################################################################################
 ################################################################################
@@ -2242,221 +2354,6 @@ rm(allSD)
 
 save(allCorrs,file=paste0(HOME,"/20200116_object_gexCorr_top5000_adjNonAdj.RData"))
 
-################################################################################
-###redo plot for rand500 iterations
-
-##track sens+spec+acc for all iter
-
-load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
-
-##do multicore
-no_cores <- detectCores(logical = TRUE)
-
-cat("using", no_cores-1,"cores","\n")
-
-cl <- makeCluster(no_cores-1)  
-registerDoParallel(cl)  
-
-clusterEvalQ(cl, {
-  library("flexmix")
-})
-
-#clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
-
-resMat2<-matrix(nrow=length(p_list),ncol=9)
-colnames(resMat2)<-c("rawAcc","rawSens","rawSpec",
-  "adjAcc","adjSens","adjSpec",
-  "binAcc","binSens","binSpec")
-
-set.seed(201012)
-refStat<-factor(1+(tnbcClass$PAM50_AIMS != "Basal"))
-for( i in 1:length(p_list)) {
-     cat(".")
-     if(i%%10==0)  cat(" ",i,"\n")
-
-  	##betaData filtered for chrX/Y
- 	betaRun<-cbind(seed=sample(length(p_list[[i]])),betaData[p_list[[i]],samples_use])
-	betaNames<-samples_use
-	b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
-    #b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
-
-     ##unadjusted
-     b1<-do.call("rbind",lapply(b,function(x) x$y.orig))
-     b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
-     b1<-factor(cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2))
-     r1<-confusionMatrix(b1,reference=refStat)
-     r1<-c(r1$overall[1],r1$byClass[1:2])
-     r1<-rbind(r1,1-r1)
-     r1<-r1[which.max(r1[,1]),]
-     resMat2[i,1:3]<-as.numeric(r1)
-     ##adjusted
-     b2<-do.call("rbind",lapply(b,function(x) x$y.tum))
-     b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
-     b2<-factor(cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2))
-     r1<-confusionMatrix(b2,reference=refStat)
-     r1<-c(r1$overall[1],r1$byClass[1:2])
-     r1<-rbind(r1,1-r1)
-     r1<-r1[which.max(r1[,1]),]
-     resMat2[i,4:6]<-as.numeric(r1)
-     ##dichotomized
-     b3<-do.call("rbind",lapply(b,function(x) x$y.orig > .3))
-     b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
-     b3<-factor(cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2))
-     r1<-confusionMatrix(b3,reference=refStat)
-     r1<-c(r1$overall[1],r1$byClass[1:2])
-     r1<-rbind(r1,1-r1)
-     r1<-r1[which.max(r1[,1]),]
-     resMat2[i,7:9]<-as.numeric(r1)
-}     
-     
-rm(i,p_list,b,b1,b2,b3,r1,refStat,cl,betaRun,betaNames)
-
-pdf(paste0(HOME,"/20200121_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
-par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
-
-boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
-  main="Discrimination of PAM50 Basal vs Luminal split"
-)
-abline(h=0,lwd=3,col="lightgrey",lty=2)
-boxplot(resMat2[,7]-resMat2[,1],at=2,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,5]-resMat2[,2],at=4,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,6]-resMat2[,3],at=7,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9]-resMat2[,3],at=8,add=T,width=2,axes=F,lwd=2)
-
-axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
-  labels=c("Adjusted",
-  "Beta>0.3",
-  "Adjusted",
-  "Beta>0.3",
-  "Adjusted",
-  "Beta>0.3")
-)
-axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
-mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.85,.85),lwd=3)
-text(1.5,.85,labels="Accuracy",pos=3)
-
-lines(x=c(4,5),y=c(.85,.85),lwd=3)
-text(4.5,.85,labels="Sensitivity",pos=3)
-
-lines(x=c(7,8),y=c(.85,.85),lwd=3)
-text(7.5,.85,labels="Specificity",pos=3)
-
-##absolute terms
-par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
-
-boxplot(resMat2[,4],at=1,xlim=c(0.5,8.5),ylim=c(0,1),width=2,axes=F,lwd=2,
-  main="Discrimination of PAM50 Basal vs Luminal split"
-)
-#abline(h=0,lwd=3,col="lightgrey",lty=2)
-boxplot(resMat2[,7],at=2,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,5],at=4,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8],at=5,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,6],at=7,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9],at=8,add=T,width=2,axes=F,lwd=2)
-
-axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
-  labels=c("Adjusted",
-  "Beta>0.3",
-  "Adjusted",
-  "Beta>0.3",
-  "Adjusted",
-  "Beta>0.3")
-)
-axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
-mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.05,.05),lwd=3)
-text(1.5,.05,labels="Accuracy",pos=3)
-
-lines(x=c(4,5),y=c(.05,.05),lwd=3)
-text(4.5,.05,labels="Sensitivity",pos=3)
-
-lines(x=c(7,8),y=c(.05,.05),lwd=3)
-text(7.5,.05,labels="Specificity",pos=3)
-
-dev.off()
-
-##deltas - adj.
-t.test(resMat2[,4]-resMat2[,1])
-#         One Sample t-test
-
-# data:  resMat2[, 4] - resMat2[, 1]
-# t = 28.641, df = 99, p-value < 2.2e-16
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  0.2511362 0.2885233
-# sample estimates:
-# mean of x 
-# 0.2698298 
-
-t.test(resMat2[,5]-resMat2[,2])
-#         One Sample t-test
-
-# data:  resMat2[, 5] - resMat2[, 2]
-# t = 20.012, df = 99, p-value < 2.2e-16
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  0.2647609 0.3230413
-# sample estimates:
-# mean of x 
-# 0.2939011 
-
-t.test(resMat2[,6]-resMat2[,3])
-#         One Sample t-test
-
-# data:  resMat2[, 6] - resMat2[, 3]
-# t = 6.6399, df = 99, p-value = 1.703e-09
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  0.1312371 0.2431025
-# sample estimates:
-# mean of x 
-# 0.1871698 
-
-
-##deltas - beta>.3
-t.test(resMat2[,7]-resMat2[,1])
-#         One Sample t-test
-
-# data:  resMat2[, 7] - resMat2[, 1]
-# t = -4.3022, df = 99, p-value = 3.974e-05
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  -0.07094633 -0.02616005
-# sample estimates:
-#   mean of x 
-# -0.04855319 
-
-t.test(resMat2[,8]-resMat2[,2])
-#         One Sample t-test
-
-# data:  resMat2[, 8] - resMat2[, 2]
-# t = -2.1794, df = 99, p-value = 0.03168
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  -0.070749732 -0.003316202
-# sample estimates:
-#   mean of x 
-# -0.03703297 
-
-t.test(resMat2[,9]-resMat2[,3])
-#         One Sample t-test
-
-# data:  resMat2[, 9] - resMat2[, 3]
-# t = -2.2099, df = 99, p-value = 0.02942
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  -0.167227780 -0.008998635
-# sample estimates:
-#   mean of x 
-# -0.08811321 
-
-save(resMat2,file=paste0(HOME,"/20200121_top50percentBySd_basalVsLuminalSplitIn100randomSets_resultsConfusionMatrix.RData"))
 
 ################################################################################
 ##Temp save
