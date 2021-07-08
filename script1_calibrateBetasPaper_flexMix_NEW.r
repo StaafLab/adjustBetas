@@ -852,6 +852,77 @@ text(7.5,.05,labels="Specificity",pos=3)
 
 dev.off()
 
+##as tiff 
+tiff(paste0(HOME,"/top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"),width=12*500,height=12*500,units="px",res=500,compression="lzw")
+par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
+
+boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
+  main="Discrimination of PAM50 Basal vs Luminal split"
+)
+abline(h=0,lwd=3,col="lightgrey",lty=2)
+boxplot(resMat2[,7]-resMat2[,1],at=2,add=T,width=2,axes=F,lwd=2)
+
+boxplot(resMat2[,5]-resMat2[,2],at=4,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
+
+boxplot(resMat2[,6]-resMat2[,3],at=7,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9]-resMat2[,3],at=8,add=T,width=2,axes=F,lwd=2)
+
+axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+  labels=c("Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3")
+)
+axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
+mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
+lines(x=c(1,2),y=c(.85,.85),lwd=3)
+text(1.5,.85,labels="Accuracy",pos=3)
+
+lines(x=c(4,5),y=c(.85,.85),lwd=3)
+text(4.5,.85,labels="Sensitivity",pos=3)
+
+lines(x=c(7,8),y=c(.85,.85),lwd=3)
+text(7.5,.85,labels="Specificity",pos=3)
+
+##absolute terms
+par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
+
+boxplot(resMat2[,4],at=1,xlim=c(0.5,8.5),ylim=c(0,1),width=2,axes=F,lwd=2,
+  main="Discrimination of PAM50 Basal vs Luminal split"
+)
+#abline(h=0,lwd=3,col="lightgrey",lty=2)
+boxplot(resMat2[,7],at=2,add=T,width=2,axes=F,lwd=2)
+
+boxplot(resMat2[,5],at=4,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8],at=5,add=T,width=2,axes=F,lwd=2)
+
+boxplot(resMat2[,6],at=7,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9],at=8,add=T,width=2,axes=F,lwd=2)
+
+axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+  labels=c("Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3",
+  "Adjusted",
+  "Beta>0.3")
+)
+axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
+mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
+lines(x=c(1,2),y=c(.05,.05),lwd=3)
+text(1.5,.05,labels="Accuracy",pos=3)
+
+lines(x=c(4,5),y=c(.05,.05),lwd=3)
+text(4.5,.05,labels="Sensitivity",pos=3)
+
+lines(x=c(7,8),y=c(.05,.05),lwd=3)
+text(7.5,.05,labels="Specificity",pos=3)
+
+dev.off()
+
 ##deltas - adj.
 t.test(resMat2[,4]-resMat2[,1])
 #         One Sample t-test
@@ -923,14 +994,13 @@ t.test(resMat2[,9]-resMat2[,3])
 
 rm(resMat2)
 
-################################################################################  ##HERE!!!
+################################################################################  
 ###Do plot with one of the random 500 iterations
 
-##4 figure panels
+##2 figure panels
   ##1. heatmap uncorrected
   ##2. heatmap corrected
-  ##3. alluvial 4-g
-  ##.4 basal/luminal v 2-group
+  ##3. basal/luminal v 2-group with 1 placeholder
 
 ##choose one of the random iters by accuracy
   ##best change pre-post?!
@@ -1039,9 +1109,11 @@ pheatmap(b2,cluster_rows = r1, cluster_cols = c3
 dev.off()
 
 ##do composite plot
-
 a2<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
 a1<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
+
+a3<-image_read(paste0(HOME,"/top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"))
+a3<-image_crop(a3,"6000x3000")
 
 a11<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
 
@@ -1062,33 +1134,78 @@ out<-image_append(c(a9,
   ),stack = F)
 out<-image_scale(out,"6000x")
 
+out<-image_append(c(out,a3),stack=T)
+
 image_write(out, path = paste0(HOME,"/random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
 
-rm(a1,a2,a9,a11,out)
-rm(c1,c2,c3,c4,c5,r1,b,b1,b2,cl)
+rm(a1,a2,a3,a9,a11,out)
+rm(c1,c2,c3,c4,c5,r1,b,b1,b2,b3,cl)
 
 gc()
 
+################################################################################ ##HERE!!!
 ################################################################################
-################################################################################
+##Create Fig 3 panels and image - Real life correction example
+
+##Panel 1 - Correction top5k, unadj clust 3-panel                             ##
 
 
 
 
 
+##Panel 2 - beta density pre/post                                             ##
+temp4<-do.call("rbind",lapply(res,function(x) x$y.tum))
+#rownames(temp4)<-rownames(testDat2)
+temp5<-do.call("rbind",lapply(res,function(x) x$y.orig))
+#rownames(temp5)<-rownames(testDat2)
 
+table(apply(temp4,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp5,1,function(x) sum(is.na(x))))
+#   0
+#5000
 
+temp4<-temp4[!apply(temp4,1,function(x) any(is.na(x))),]
 
+quantile(testDat2)
+#    0%   25%   50%   75%  100% 
+# 0.000 0.152 0.468 0.741 1.000 
 
+quantile(temp4)
+#    0%   25%   50%   75%  100% 
+# 0.000 0.061 0.529 0.916 1.000 
 
+##Plot histogram of betas before and after correction
+tiff(paste0(HOME,"/top5k_betaDistribution_tumors_beforeAfterCorrection.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 
-################################################################################
-################################################################################
-##Create Fig 3 panels and image
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+plot(1,xlim=range(round(density(temp4)$x,1)),ylim=range(round(density(temp4)$y,1))+c(0,.5),type="n",las=1,axes=F,
+  xlab="beta",ylab="density"
+)
+lines(density(temp4),col=2,lwd=2)
+lines(density(testDat2),col=1,lwd=2)
+axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
+axis(2,lwd=2,las=1)
+legend("topright",legend=c("unadjusted beta","adjusted beta"),col=c(1,2),lwd=2,bty="n")
+dev.off()
 
-##Panel 1 - Correction top5k, unadj clust 3-panel
+##Plot histogram of betas before and after correction
+tiff(paste0(HOME,"/top5k_tumorFracVsMeanCorrection.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+plot(fracTum,
+    apply(abs(temp4-temp5),2,mean),
+  pch=16,cex=.5,xlim=c(0,1),ylim=c(0,.5),
+  main="Average beta correction vs global correlation",
+  xlab="tumor fraction",
+  ylab="mean absolute beta difference pre-post correction",
+  axes=F#,type="n"
+)
+axis(1,lwd=2,las=1)
+axis(2,lwd=2,las=1)
+dev.off()
 
-##Panel 2 - beta density pre/post
+rm(temp4,temp5)
 
 ##Panel 3 - correl inferred vs actual
 
