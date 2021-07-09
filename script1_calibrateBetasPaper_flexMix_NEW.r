@@ -1149,6 +1149,117 @@ gc()
 
 ##Panel 1 - Correction top5k, unadj clust 3-panel                             ##
 
+##check stats
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
+temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
+temp4<-beta_norm[rownames(temp1),]
+
+table(apply(temp1,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp2,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp3,1,function(x) sum(is.na(x))))
+#   0
+#5000
+
+table(annoObj[rownames(temp1),"chr"])
+ # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
+ #  557   272   213   255   156   144    98   169   272    69   205   365   130    43    54   248   192 
+ # chr5  chr6  chr7  chr8  chr9 
+ #  370   392   386   353    57 
+
+##do clustering
+c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
+c2<-unique(c1[hclust( as.dist( 1-cor(temp1) ),method="ward.D")$order])
+r1<-hclust( dist(temp1),method="ward.D")
+c3<-hclust( as.dist( 1-cor(temp1) ),method="ward.D")
+c4<-cutree( hclust( as.dist( 1-cor(temp3) ),method="ward.D"),5)
+
+sample_anno<-data.frame(adj5000=as.character(c1),
+  unadj5000=as.character(c4),
+  ER=sampleAnno$ER,
+  PR=sampleAnno$PR,
+  HER2=sampleAnno$HER2,
+  TNBC=as.character(as.integer(sampleAnno$TNBC)),
+  PAM50=sampleAnno$pam50.full,stringsAsFactors=FALSE
+  )
+rownames(sample_anno)<-colnames(temp1)
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    ER = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    PR = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    HER2 = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"),
+    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
+  )
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, unadj data, adj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, \"inferred normal\", adj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
+  "adj5000"=rep("NA",ncol(temp4)),
+  "ER"=rep("NA",ncol(temp4)),
+  "PR"=rep("NA",ncol(temp4)),
+  "HER2"=rep("NA",ncol(temp4)),
+  "TNBC"=rep("NA",ncol(temp4)),
+  "PAM50"=rep("NA",ncol(temp4)),stringsAsFactors=FALSE
+)
+rownames(sample_anno)<-colnames(temp4)
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_normalBeta.tiff"),width=9*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp4,cluster_rows = r1, 
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, GSE67919 external normal, default clust , pearC/euclR"
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+  
+)
+dev.off()
+
 
 
 
@@ -1177,7 +1288,7 @@ quantile(temp4)
 # 0.000 0.061 0.529 0.916 1.000 
 
 ##Plot histogram of betas before and after correction
-tiff(paste0(HOME,"/top5k_betaDistribution_tumors_beforeAfterCorrection.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig3_top5k_betaDistribution_tumors_beforeAfterCorrection.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 plot(1,xlim=range(round(density(temp4)$x,1)),ylim=range(round(density(temp4)$y,1))+c(0,.5),type="n",las=1,axes=F,
@@ -1191,7 +1302,7 @@ legend("topright",legend=c("unadjusted beta","adjusted beta"),col=c(1,2),lwd=2,b
 dev.off()
 
 ##Plot histogram of betas before and after correction
-tiff(paste0(HOME,"/top5k_tumorFracVsMeanCorrection.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig3_top5k_tumorFracVsMeanCorrection.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 plot(fracTum,
     apply(abs(temp4-temp5),2,mean),
@@ -1207,7 +1318,75 @@ dev.off()
 
 rm(temp4,temp5)
 
-##Panel 3 - correl inferred vs actual
+##Panel 3 - correl inferred vs actual                                         ##
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+
+temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
+
+ff<-intersect( rownames(temp2) , rownames(beta_norm) )
+
+length(ff)
+#[1] 5000
+
+#plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
+
+table(apply(beta_norm[ff,],1,function(z) any(is.na(z))))
+# FALSE  TRUE 
+#  4085   915 
+
+table(apply(beta_norm[ff,],1,function(z) sum(is.na(z))))
+#    0    1    2    3    4    5    6    7    8   10   11   12   17   40   60 
+# 4085  470  200  110   59   31   16    8    7    3    6    2    1    1    1 
+
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE) )
+dev.off()
+
+##will change slightly if rerun - not deterministic..
+cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE) )
+#[1] 0.9250216
+(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
+#[1] 0.133569
+(cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),method="spe" ))
+#[1] 0.8848514
+(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="pe" ))
+#[1] 0.01715253
+(sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),method="pe" ))
+#[1] 0.9250216
+(fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),method="pe" )$p.value)
+#[1] 0
+
+length(ff)
+#[1] 5000
+
+pdf(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),pch=16
+  ,main="Correlation 450K normal - TCGA BRCA inferred normal"
+  ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
+  ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
+ )
+points(rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16)
+text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
+abline(lm(rowMeans(beta_norm[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
+axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
+dev.off()
+
+tiff(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),pch=16
+  ,main="Correlation 450K normal - TCGA BRCA inferred normal"
+  ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
+  ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
+ )
+points(rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16)
+text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
+abline(lm(rowMeans(beta_norm[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
+axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
+dev.off()
+
+rm(ff,fs)
 
 ##Panel 4 - boxplot purity 5-group adj/unadj
 
@@ -1413,66 +1592,6 @@ par(mfrow=c(2,2))
 
 
 i<-i+1
-
-
-################################################################################
-###Check correlation "inferred normal" to true normal
-
-ff<-intersect( rownames(temp2) , rownames(beta_norm) )
-
-length(ff)
-#[1] 3694
-
-#plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
-
-table(apply(beta_norm[ff,],1,function(z) any(is.na(z))))
-#FALSE  TRUE 
-# 2902   792 
-
-table(apply(beta_norm[ff,],1,function(z) sum(is.na(z))))
-#   0    1    2    3    4    5    6    7    8    9   10   11   12   14   16   17   21   24 
-#2902  344  168  125   54   36   25   12   11    4    4    2    2    1    1    1    1    1 
-
-ff2<-!apply(beta_norm[ff,],1,function(z) any(is.na(z)))
-
-ff<-ff[ff2]
-
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
-
-##will change slightly if rerun - not deterministic..
-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
-#[1] 0.763079
-(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
-#[1] 0.100357
-(cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="spe" ))
-#[1] 0.6649534
-(cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="pe" ))
-#[1] -0.03620098
-(sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" ))
-#[1] 0.763079
-(fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),method="pe" )$p.value)
-#[1] 0
-
-length(ff)
-#[1] 2902
-
-pdf(paste0(HOME,"/20191203_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16
-  ,main="Correlation 450K normal - 850K inferred normal"
-  ,xlab="mean inferred normal beta 850k",ylab="mean normal beta 450k GSE67919"
-  ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
- )
-points(rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16)
-text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(beta_norm[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
-axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
-dev.off()
-
-rm(ff,fs,ff2)
-
-
 
 
 ################################################################################
