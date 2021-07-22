@@ -710,6 +710,11 @@ save(resMat,file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomS
 
 rm(varF)
 
+
+##tmp
+#load(paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_runResults.RData"))
+#load(paste0(HOME,"/tempWorkspace_210608.RData"))
+
 ################################################################################
 ################################################################################
 ###redo plot for rand500 iterations
@@ -782,7 +787,7 @@ rm(varF)
 
 resMat2<-resMat
 
-pdf(paste0(HOME,"/top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
+pdf(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
 boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
@@ -853,7 +858,7 @@ text(7.5,.05,labels="Specificity",pos=3)
 dev.off()
 
 ##as tiff 
-tiff(paste0(HOME,"/top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"),width=12*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"),width=12*500,height=12*500,units="px",res=500,compression="lzw")
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
 boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
@@ -1064,7 +1069,7 @@ my_colour = list(unadj500=c("1"="#E41A1C","2"="#377EB8"),
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b1,cluster_rows = r1,cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",fontsize=18,cutree_cols=2
@@ -1073,7 +1078,7 @@ pheatmap(b1,cluster_rows = r1,cluster_cols = c3
 )
 dev.off()
 
-tiff(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b1,cluster_rows = r1,cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",fontsize=18,cutree_cols=2
@@ -1099,7 +1104,7 @@ sample_anno<-data.frame(unadj500=as.character(c1),
 rownames(sample_anno)<-colnames(betaData)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-tiff(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
 pheatmap(b2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=2,fontsize=18
@@ -1109,21 +1114,21 @@ pheatmap(b2,cluster_rows = r1, cluster_cols = c3
 dev.off()
 
 ##do composite plot
-a2<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
-a1<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
+a2<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
+a1<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
 
-a3<-image_read(paste0(HOME,"/top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"))
+a3<-image_read(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"))
 a3<-image_crop(a3,"6000x3000")
 
-a11<-image_read(paste0(HOME,"/random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
+a11<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
 
 a11<-image_crop(a11,"1000x6000+4300")
 
-tiff(paste0(HOME,"/random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
 par(mar=c(0,0,0,0))
 plot(1,type="n",axes=F,xlab="",ylab="")
 dev.off()
-a9<-image_read(paste0(HOME,"/random500_heatmap_noAnno_white.tiff"))
+a9<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_white.tiff"))
 
 out<-image_append(c(a9,
   a1,
@@ -1136,7 +1141,7 @@ out<-image_scale(out,"6000x")
 
 out<-image_append(c(out,a3),stack=T)
 
-image_write(out, path = paste0(HOME,"/random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
+image_write(out, path = paste0(HOME,"/fig2_random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
 
 rm(a1,a2,a3,a9,a11,out)
 rm(c1,c2,c3,c4,c5,r1,b,b1,b2,b3,cl)
@@ -1164,6 +1169,9 @@ table(apply(temp2,1,function(x) sum(is.na(x))))
 table(apply(temp3,1,function(x) sum(is.na(x))))
 #   0
 #5000
+table(apply(temp4,1,function(x) sum(is.na(x))))
+#    0    1    2    3    4    5    6    7    8   10   11   12   17   40   60 
+# 4085  470  200  110   59   31   16    8    7    3    6    2    1    1    1 
 
 table(annoObj[rownames(temp1),"chr"])
  # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
@@ -1173,7 +1181,7 @@ table(annoObj[rownames(temp1),"chr"])
 
 ##do clustering
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
-c2<-unique(c1[hclust( as.dist( 1-cor(temp1) ),method="ward.D")$order])
+c2<-hclust( as.dist( 1-cor(temp4) ),method="ward.D")
 r1<-hclust( dist(temp1),method="ward.D")
 c3<-hclust( as.dist( 1-cor(temp1) ),method="ward.D")
 c4<-cutree( hclust( as.dist( 1-cor(temp3) ),method="ward.D"),5)
@@ -1189,79 +1197,64 @@ sample_anno<-data.frame(adj5000=as.character(c1),
 rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
     ER = c("[Not Available]"="#FFFF33",
       "[Not Evaluated]"="#FF7F00",
       "Equivocal"="#377EB8",
       "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
+      "Positive"="#4DAF4A"
+      ),
     PR = c("[Not Available]"="#FFFF33",
       "[Not Evaluated]"="#FF7F00",
       "Equivocal"="#377EB8",
       "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
+      "Positive"="#4DAF4A"
+      ),
     HER2 = c("[Not Available]"="#FFFF33",
       "[Not Evaluated]"="#FF7F00",
       "Equivocal"="#377EB8",
       "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
-    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
+      "Positive"="#4DAF4A"
+      ),
+    TNBC = c("1"="black","0"="lightgrey"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"),stringsAsFactors=FALSE
   )
 
-tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="top 5000 by sd, unadj data, adj clust , pearC/euclR",cutree_cols=5
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, unadj data, adj clust , pearCol/euclRow",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
 dev.off()
 
-tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, adj data, adj clust , pearCol/euclRow",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
 dev.off()
 
-tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="top 5000 by sd, \"inferred normal\", adj clust , pearC/euclR",cutree_cols=5
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, \"inferred normal\", adj clust , pearCol/euclRow",cutree_cols=5
   ,annotation_col=sample_anno,annotation_colors=my_colour
 )
 dev.off()
 
-sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
-  "adj5000"=rep("NA",ncol(temp4)),
-  "ER"=rep("NA",ncol(temp4)),
-  "PR"=rep("NA",ncol(temp4)),
-  "HER2"=rep("NA",ncol(temp4)),
-  "TNBC"=rep("NA",ncol(temp4)),
-  "PAM50"=rep("NA",ncol(temp4)),stringsAsFactors=FALSE
-)
-rownames(sample_anno)<-colnames(temp4)
-sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_normalBeta.tiff"),width=9*500,height=13*500,units="px",res=500,compression="lzw")
-pheatmap(temp4,cluster_rows = r1, 
-  ,show_rownames=F,show_colnames=F
-  ,main="top 5000 by sd, GSE67919 external normal, default clust , pearC/euclR"
-  ,annotation_col=sample_anno,annotation_colors=my_colour
-  
+tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_normalBeta.tiff"),width=9*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp4,cluster_rows = r1,cluster_cols = c2
+  ,show_rownames=F,show_colnames=F,,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, GSE67919 external normal, pearCol/euclRow" 
 )
 dev.off()
-
-
-
 
 
 ##Panel 2 - beta density pre/post                                             ##
@@ -1361,7 +1354,7 @@ length(ff)
 pdf(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),pch=16
-  ,main="Correlation 450K normal - TCGA BRCA inferred normal"
+  ,main=""
   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
  )
@@ -1375,7 +1368,7 @@ dev.off()
 tiff(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),pch=16
-  ,main="Correlation 450K normal - TCGA BRCA inferred normal"
+  ,main=""
   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
  )
@@ -1388,9 +1381,194 @@ dev.off()
 
 rm(ff,fs)
 
-##Panel 4 - boxplot purity 5-group adj/unadj
+##combine
+a1<-image_read(paste0(HOME,"/fig3_top5k_betaDistribution_tumors_beforeAfterCorrection.tiff"))
+a1<-image_scale(a1,"2000x")
+
+a2<-image_read(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.tiff"))
+a2<-image_scale(a2,"2000x")
+
+out<-image_append(c(a1,a2
+  ),stack = T)
+out<-image_scale(out,"x2000")
+
+image_write(out, path = paste0(HOME,"/fig3_top5kBySd_betaDistAndInfVAct_combined.tiff"), format = "tiff")
+
+
+##Panel 4 - boxplot purity 5-group adj/unadj                                  ##
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+
+temp2<-do.call("rbind",lapply(res,function(x) x$y.orig))
+
+c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
+c2<-cutree( hclust( as.dist( 1-cor(temp2) ),method="ward.D"),5)
+
+tiff(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_adj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)#,fig=c(0.25,.75,0,1),mar=c(5.1,4.1,0.1,2.1))
+boxplot(fracTum~c1,col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+  ,main=""
+  ,xlab="adjusted beta - 5 group",ylab="ABSOLUTE purity"
+  ,type="n",las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
+  )
+axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
+axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
+text(2,.05,paste0("p(kw-test)=",signif(kruskal.test(fracTum~c1)$p.value,2)))
+dev.off()
+
+tiff(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_unadj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)#,fig=c(0.25,.75,0,1),mar=c(5.1,4.1,0.1,2.1))
+boxplot(fracTum~c2,col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+  ,main=""
+  ,xlab="unadjusted beta - 5 group",ylab="ABSOLUTE purity"
+  ,type="n",las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
+  )
+axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
+axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
+text(2,.05,paste0("p(kw-test)=",signif(kruskal.test(fracTum~c2)$p.value,2)))
+dev.off()
+
+a1<-image_read(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_adj.tiff"))
+# a1<-image_crop(a1,"3000x2000+1000")
+# a1<-image_crop(a1,"2000x2000")
+a1<-image_scale(a1,"x2000")
+
+a2<-image_read(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_unadj.tiff"))
+# a2<-image_crop(a2,"3000x2000+1000")
+# a2<-image_crop(a2,"2000x2000")
+a2<-image_scale(a2,"x2000")
+
+out<-image_append(c(a2,a1
+  ),stack = T)
+out<-image_scale(out,"x2000")
+
+image_write(out, path = paste0(HOME,"/fig3_top5kBySd_clusterVpurity_combined.tiff"), format = "tiff")
 
 ##Panel 5 - barplot PAM50
+
+tiff(paste0(HOME,"/fig3_top5kBySd_barplotPam50_adj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+tt<-table(sampleAnno$pam50.full,factor(c1))
+barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),
+  ,main="",legend.text=F
+  ,xlab="adjusted beta - 5 group",ylab="Fraction of cluster"
+  ,las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
+  )
+#axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
+axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
+dev.off()
+
+tiff(paste0(HOME,"/fig3_top5kBySd_barplotPam50_unadj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+tt<-table(sampleAnno$pam50.full,factor(c2))
+barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),
+  ,main="",legend.text=T
+  ,xlab="unadjusted beta - 5 group",ylab="Fraction of cluster"
+  ,las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
+  )
+#axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
+axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
+dev.off()
+
+a1<-image_read(paste0(HOME,"/fig3_top5kBySd_barplotPam50_adj.tiff"))
+# a1<-image_crop(a1,"3000x2000+1000")
+# a1<-image_crop(a1,"2000x2000")
+a1<-image_scale(a1,"x2000")
+
+a2<-image_read(paste0(HOME,"/fig3_top5kBySd_barplotPam50_unadj.tiff"))
+# a2<-image_crop(a2,"3000x2000+1000")
+# a2<-image_crop(a2,"2000x2000")
+a2<-image_scale(a2,"x2000")
+
+out<-image_append(c(a2,a1
+  ),stack = T)
+out<-image_scale(out,"x2000")
+
+image_write(out, path = paste0(HOME,"/fig3_top5kBySd_barplotPam50_combined.tiff"), format = "tiff")
+
+##combine again
+a1<-image_read(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_combined.tiff"))
+# a1<-image_crop(a1,"3000x2000+1000")
+# a1<-image_crop(a1,"2000x2000")
+a1<-image_scale(a1,"x2000")
+
+a2<-image_read(paste0(HOME,"/fig3_top5kBySd_barplotPam50_combined.tiff"))
+# a2<-image_crop(a2,"3000x2000+1000")
+# a2<-image_crop(a2,"2000x2000")
+a2<-image_scale(a2,"x2000")
+
+out<-image_append(c(a1,a2
+  ),stack = F)
+#out<-image_scale(out,"x2000")
+
+image_write(out, path = paste0(HOME,"/fig3_top5kBySd_clusterStat_combined.tiff"), format = "tiff")
+
+
+##Combine all                                          ##
+
+##cut away anno legend from 2/3 paste together to form image..
+a1<-image_read(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"))
+a1<-image_crop(a1,"4115x6375+0+125")
+
+#image_write(image_crop(a1,"4115x6375+0+125"),paste0(HOME,"/fig3_test.tiff"))
+
+a2<-image_read(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"))
+a2<-image_crop(a2,"4115x6375+0+125")
+
+a3<-image_read(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"))
+a3<-image_crop(a3,"5000x6375+0+125")
+
+tiff(paste0(HOME,"/fig3_top5k_heatmap_whitePadding.tiff"),width=.25*500,height=6375/500,units="px",res=500,compression="lzw")
+par(mar=c(0,0,0,0))
+plot(1,type="n",axes=F,xlab="",ylab="")
+dev.off()
+a4<-image_read(paste0(HOME,"/fig3_top5k_heatmap_whitePadding.tiff"))
+
+tiff(paste0(HOME,"/fig3_top5k_heatmap_whitePadding2.tiff"),width=4150,height=.1*500,units="px",res=500,compression="lzw")
+par(mar=c(0,0,0,0))
+plot(1,type="n",axes=F,xlab="",ylab="")
+dev.off()
+a5<-image_read(paste0(HOME,"/fig3_top5k_heatmap_whitePadding2.tiff"))
+
+out<-image_append(c(a4,a1,a4,
+  a2,a4,
+  a3
+  ),stack = F)
+out<-image_scale(out,"4150x")
+
+out<-image_append(c(a5,out
+  ),stack = T)
+
+image_write(out, path = paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_combined.tiff"), format = "tiff")
+
+rm(a1,a2,a3,a4,a5,out)
+rm(c1,c2,c3,c4,r1,temp1,temp2,temp3,temp4)
+
+gc()
+
+##second panel row
+a1<-image_read(paste0(HOME,"/fig3_top5kBySd_betaDistAndInfVAct_combined.tiff"))
+a1<-image_scale(a1,"1000x")
+
+a2<-image_read(paste0(HOME,"/fig3_top5kBySd_clusterStat_combined.tiff"))
+a2<-image_scale(a2,"2000x")
+
+out<-image_append(c(a1,a2
+  ),stack = F)
+out<-image_scale(out,"4150x")
+
+image_write(out, path = paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_combined_secondPanel.tiff"), format = "tiff")
+
+##combine  with heatmap
+
+a1<-image_read(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_combined.tiff"))
+
+a2<-image_read(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_combined_secondPanel.tiff"))
+
+out<-image_append(c(a1,a2
+  ),stack = T)
+out<-image_scale(out,"4150x")
+
+image_write(out, path = paste0(HOME,"/fig3_final.tiff"), format = "tiff")
 
 ################################################################################
 ################################################################################
@@ -1398,13 +1576,246 @@ rm(ff,fs)
 
 ##Panel 1 - Autosomes vs X?
 
-##Panel 2 - 
+all.equal(names(fracTum),colnames(betaOrig))
+#[1] TRUE
+
+all.equal(rownames(annoObj),rownames(betaOrig))
+#[1] TRUE
+
+all.equal(rownames(annoObj),rownames(betaNorm))
+#[1] TRUE
+
+all(rownames(annoObj) %in% rownames(beta_norm))
+#[1] TRUE
+
+table(annoObj$chr)
+#  chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 
+# 41098 21206 25633 21624 10540 13204 13119 18627 24356  5280 21984 30550  9354 
+# chr21 chr22  chr3  chr4  chr5  chr6  chr7  chr8  chr9  chrX  chrY 
+#  3378  7222 22315 17646 21279 31170 25024 18194  8605  9718   242 
+
+table(annoObj$illuminaCpG_CpH_Probe)
+#     cg     ch 
+# 418858   2510 
+
+betaData<-betaOrig[ !annoObj$chr %in% c("chrY") &
+   annoObj$illuminaCpG_CpH_Probe == "cg"
+,]
+
+betaData2<-betaAdj[ !annoObj$chr %in% c("chrY") &
+   annoObj$illuminaCpG_CpH_Probe == "cg"
+,]
+
+betaNorm2<-betaNorm[ !annoObj$chr %in% c("chrY") &
+   annoObj$illuminaCpG_CpH_Probe == "cg"
+,]
+
+beta_norm2<-beta_norm[rownames(annoObj),]
+beta_norm2<-beta_norm2[ !annoObj$chr %in% c("chrY") &
+   annoObj$illuminaCpG_CpH_Probe == "cg"
+,]
+
+annoObj2<-annoObj[ !annoObj$chr %in% c("chrY") &
+   annoObj$illuminaCpG_CpH_Probe == "cg"
+,]
+
+all.equal(rownames(annoObj2),rownames(betaData))
+#[1] TRUE
+
+all.equal(rownames(annoObj2),rownames(betaData2))
+#[1] TRUE
+
+str(annoObj2)
+# 'data.frame':   418616 obs. of  65 variables:
+#  $ illuminaID                   : chr  "cg21870274" "cg08258224" "cg16619049" "cg18147296" ...
+#  $ chr                          : chr  "chr1" "chr1" "chr1" "chr1" ...
+#  $ start                        : num  69591 864703 870161 877159 898803 ...
+#  $ end                          : num  69592 864704 870162 877160 898804 ...
+#  $ hasUCSCknownGeneOverlap      : num  1 0 1 1 0 0 0 0 0 0 ...
+#  $ nameUCSCknownGeneOverlap     : chr  "OR4F5" "" "FAM41C" "FAM41C" ...
+#  $ numberUCSCknownGeneOverlap   : num  1 0 1 1 0 0 0 0 0 0 ...
+#  $ hasUCSCknownGenePromOverlap  : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ hasUCSCknownGeneUp5kbOverlap : num  0 0 0 0 0 0 0 0 0 0 ...
+#  $ hasUCSCknownGeneDn5kbOverlap : num  1 0 0 0 0 0 0 0 0 0 ...
+#  $ hasUCSCknownTxPromOverlap    : num  0 0 1 1 0 0 0 0 0 0 ...
+#  $ hasUCSCknownTxUp5kbOverlap   : num  0 0 1 0 0 0 0 1 1 1 ...
+#  $ hasUCSCknownTxDn5kbOverlap   : num  1 1 0 1 0 0 0 0 0 0 ...
+#  $ ucscKnownGeneIsDistal        : num  0 1 1 0 1 1 1 1 1 1 ...
+#  $ ucscKnownGeneIsGenic         : num  1 0 1 1 0 0 0 0 0 0 ...
+#  $ ucscKnownGeneIsDistalNonGenic: num  0 1 0 0 1 1 1 1 1 1 ...
+#  $ ucscKnownGeneIsGeneBody      : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ hasGeneOverlap               : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ nameGeneOverlap              : chr  "ENSG00000186092|OR4F5" "" "ENSG00000230368|FAM41C" "" ...
+#  $ numberGeneOverlap            : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ hasUp5kbOverlap              : num  0 0 1 0 0 0 0 1 1 1 ...
+#  $ nameUp5kbOverlap             : chr  "" "" "ENSG00000234711|TUBB8P11" "" ...
+#  $ numberUp5kbOverlap           : num  0 0 1 0 0 0 0 1 1 1 ...
+#  $ hasDn5kbOverlap              : num  1 0 0 1 0 0 0 0 0 0 ...
+#  $ nameDn5kbOverlap             : chr  "ENSG00000186092|OR4F5" "" "" "ENSG00000234711|TUBB8P11" ...
+#  $ numberDn5kbOverlap           : num  1 0 0 1 0 0 0 0 0 0 ...
+#  $ hasPromOverlap               : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ namePromOverlap              : chr  "" "" "" "ENSG00000230368|FAM41C" ...
+#  $ numberPromOverlap            : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ isPromMostVariable           : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ namePromMostVariable         : chr  "" "" "" "ENSG00000230368|FAM41C" ...
+#  $ numberPromMostVariable       : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ hasAtacOverlap               : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ nameAtacOverlap              : chr  "" "" "chr1:869670-870169" "" ...
+#  $ numberAtacOverlap            : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ isAtacMostVariable           : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ isDistal                     : num  0 1 0 0 1 1 1 0 0 0 ...
+#  $ isGenic                      : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ isDistalNonGenic             : num  0 1 0 0 1 1 1 0 0 0 ...
+#  $ isGeneBody                   : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ weberOE                      : num  0.248 0.249 0.637 0.163 0.565 ...
+#  $ weberClass                   : chr  "LCP" "LCP" "HCP" "LCP" ...
+#  $ saxonovOE                    : num  0.238 0.268 0.473 0.202 0.441 ...
+#  $ saxonovClass                 : chr  "LCG" "LCG" "HCG" "LCG" ...
+#  $ cgCount300Bp                 : int  6 2 27 4 9 13 16 8 18 16 ...
+#  $ cgPer100Bp                   : num  2 0.667 9 1.333 3 ...
+#  $ isCgi                        : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ isShore                      : num  0 1 0 0 0 0 0 0 1 1 ...
+#  $ isOcean                      : num  1 0 0 1 1 1 1 1 0 0 ...
+#  $ cgiClass                     : chr  "ocean" "shore" "cgi" "ocean" ...
+#  $ featureClass                 : chr  "proximal dn" "distal" "proximal up" "promoter" ...
+#  $ featureClassUcsc             : chr  "proximal dn" "distal" "distal body" "promoter" ...
+#  $ illuminaCpG_CpH_Probe        : chr  "cg" "cg" "cg" "cg" ...
+#  $ encodeCre                    : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ encodeCreCategory            : chr  "" "" "PLS" "" ...
+#  $ encodeCreCtcf                : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ encodeChipMeanNcellPeaks     : num  0 0 4.73 0 1 ...
+#  $ encodeChipUniqueTfPeaks      : num  0 0 30 0 9 7 7 1 1 0 ...
+#  $ hasAnyRepeatOverlap          : num  0 0 0 0 0 0 0 0 1 1 ...
+#  $ hasMultiRepeatOverlap        : num  0 0 0 0 0 0 0 0 0 0 ...
+#  $ hasOneRepeatOverlap          : num  0 0 0 0 0 0 0 0 1 1 ...
+#  $ hasRepeatOverlap             : num  0 0 0 0 0 0 0 0 1 1 ...
+#  $ repeatClass                  : chr  "" "" "" "" ...
+#  $ repeatFamily                 : chr  "" "" "" "" ...
+#  $ repeatName                   : chr  "" "" "" "" ...
+
+##panel 1 - X-beta in normals
+tiff(paste0(HOME,"/fig4_xChromAdjStats_panel1.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+plot(density((betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$saxonovClass == "HCG",]))
+  ,main="",type="n"
+  ,xlab="X chromosome HCG promoter methylation (N=434 CpGs)",ylab="Density"
+  ,las=1,axes=F,xlim=c(0,1),ylim=c(0,2.5)
+  )
+abline(v=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
+lines(density((betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$saxonovClass == "HCG",])),lwd=3,col="#E41A1C",lty=1)
+lines(density((beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$saxonovClass == "HCG",]),na.rm=T),lwd=3,col="#377EB8",lty=1)
+axis(1,lwd=2,las=1,at=seq(0,1,by=.25),font=2)
+axis(2,lwd=2,las=1,font=2)
+legend("topright",legend=c("inferred normal","GSE67919 normal"),bty="n",col=c("#E41A1C","#377EB8"),lwd=3)
+
+text(.85,.075,labels="Hyper > 0.75")
+text(.5,.075,labels="0.25 < Xi < 0.75")
+text(.15,.075,labels="Hypo < 0.25")
+
+
+ai<-table(apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+  if( median(x)<.25) { 
+    return("hypo") 
+  }
+  if( median(x)>.75) { 
+    return("hyper") 
+  } else {
+    return("Xi")
+  }
+}))
+text(.12,2.2,paste("inferred normal",paste(paste(names(ai),round(ai/sum(ai),2),sep=": ")," (N=",ai,")",sep="",collapse="\n"),sep="\n"))
+
+bi<-table(apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+  if( median(x,na.rm=T)<.25) { 
+    return("hypo") 
+  }
+  if( median(x,na.rm=T)>.75) { 
+    return("hyper") 
+  } else {
+    return("Xi")
+  }
+}))
+text(.12,1.75,paste("GSE67919 normal",paste(paste(names(bi),round(bi/sum(bi),2),sep=": ")," (N=",bi,")",sep="",collapse="\n"),sep="\n"))
+
+ai<-apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+  if( median(x)<.25) { 
+    return("hypo") 
+  }
+  if( median(x)>.75) { 
+    return("hyper") 
+  } else {
+    return("Xi")
+  }
+})
+bi<-apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+  if( median(x,na.rm=T)<.25) { 
+    return("hypo") 
+  }
+  if( median(x,na.rm=T)>.75) { 
+    return("hyper") 
+  } else {
+    return("Xi")
+  }
+})
+names(ai)<-sub("_.+","",annoObj2$namePromMostVariable[annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP"])
+names(bi)<-sub("_.+","",annoObj2$namePromMostVariable[annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP"])
+text(.12,1.4,paste0("concordance=",round(100*sum(diag(table(ai,bi))/length(ai)),1),"%"))
+
+##compare with published list of Xi-escape genes (N=75)
+  ##https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-019-5507-6#Sec22
+library(readxl)
+library(httr)
+url1<-"https://static-content.springer.com/esm/art%3A10.1186%2Fs12864-019-5507-6/MediaObjects/12864_2019_5507_MOESM6_ESM.xlsx"
+GET(url1, write_disk(tf <- tempfile(fileext = ".xlsx")))
+df <- read_xlsx(tf,skip=1)
+colnames(df)<-sub("\\W","",colnames(df))
+str(df)
+df<-df$GeneSymbol
+
+text(.75,2.1,paste0("Katsir & Linial 2019 Xi-escape overlap"))
+text(.75,2,paste0("Hypo  ",round(100 *length(intersect(sub("ENSG.+\\|","",names(ai)[ai=="hypo"]),df))/sum(ai=="hypo"),1),"%"))
+text(.75,1.9,paste0("Xi         ",round(100 *length(intersect(sub("ENSG.+\\|","",names(ai)[ai=="Xi"]),df))/sum(ai=="Xi"),1),"%"))
+text(.75,1.8,paste0("Hyper     ",round(100 *length(intersect(sub("ENSG.+\\|","",names(ai)[ai=="hyper"]),df))/sum(ai=="hyper"),1),"%"))
+dev.off()
+
+
+##panel 2 - Beta dist in unadj vs adj
+tiff(paste0(HOME,"/fig4_xChromAdjStats_panel2.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(font=2,font.axis=2,font.lab=2,font.sub=2)
+plot(density((betaData[ annoObj2$chr == "chrX" ,]))
+  ,main="",type="n"
+  ,xlab="X chromosome HCG CpG methylation (N=6736 CpGs)",ylab="Density"
+  ,las=1,axes=F,xlim=c(0,1),ylim=c(0,3.5)
+  )
+abline(v=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
+lines(density((betaData[ annoObj2$chr == "chrX" & annoObj2$saxonovClass == "HCG",])),lwd=3,col="#377EB8",lty=1)
+lines(density((betaData2[ annoObj2$chr == "chrX" & annoObj2$saxonovClass == "HCG",])),lwd=3,col="#E41A1C",lty=1)
+axis(1,lwd=2,las=1,at=seq(0,1,by=.25),font=2)
+axis(2,lwd=2,las=1,font=2)
+legend("topright",legend=c("adjusted beta","unadjusted beta"),bty="n",col=c("#E41A1C","#377EB8"),lwd=3)
+dev.off()
+
+
+a1<-image_read(paste0(HOME,"/fig4_xChromAdjStats_panel1.tiff"))
+
+a2<-image_read(paste0(HOME,"/fig4_xChromAdjStats_panel2.tiff"))
+
+out<-image_append(c(a1,a2
+  ),stack = T)
+out<-image_scale(out,"2075x")
+
+image_write(out, path = paste0(HOME,"/fig4_final.tiff"), format = "tiff")
 
 ################################################################################
 ################################################################################
 ##Create Fig 5 panels and image
 
 ##Panel 1 - Global effect
+
+##find some biology...
+
+##load FOXA1 encode sites..
+
 
 
 ################################################################################
