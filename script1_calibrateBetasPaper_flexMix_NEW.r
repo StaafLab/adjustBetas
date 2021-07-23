@@ -52,6 +52,16 @@ if(!requireNamespace("magick", quietly = TRUE)) {
 
 library(magick)
 
+if(!requireNamespace("httr", quietly = TRUE)) {
+  install.packages("httr") }
+
+library(httr)
+
+if(!requireNamespace("readxl", quietly = TRUE)) {
+  install.packages("readxl") }
+
+library(readxl)
+
 if(!requireNamespace("ggalluvial", quietly = TRUE)) {
   install.packages("ggalluvial") }
 
@@ -1810,11 +1820,185 @@ image_write(out, path = paste0(HOME,"/fig4_final.tiff"), format = "tiff")
 ################################################################################
 ##Create Fig 5 panels and image
 
-##Panel 1 - Global effect
+##check stats
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
+temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
+temp4<-beta_norm[rownames(temp1),]
 
-##find some biology...
+table(apply(temp1,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp2,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp3,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp4,1,function(x) sum(is.na(x))))
+#    0    1    2    3    4    5    6    7    8   10   11   12   17   40   60 
+# 4085  470  200  110   59   31   16    8    7    3    6    2    1    1    1 
 
-##load FOXA1 encode sites..
+table(annoObj[rownames(temp1),"chr"])
+ # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
+ #  557   272   213   255   156   144    98   169   272    69   205   365   130    43    54   248   192 
+ # chr5  chr6  chr7  chr8  chr9 
+ #  370   392   386   353    57 
+
+##load TFmatrix
+load(file=paste0(DATA,"/annotateFeatures/","object_noChromFilter_421368x340_encodeTfbsAnnotations.RData"))
+
+##Which are most enriched
+Bb<-(colSums(tfMat[rownames(temp1),])/5000) / (colSums(tfMat)/nrow(tfMat))
+
+length(Bb)
+#[1] 340
+Bb[order(Bb)]
+#     CREBBP      NR0B1      PLRG1      RBM17      SAFB2      SMAD2      SRSF9     ZNF507       ZZZ3       KAT8     ZBTB7B     ZNF574      ASH1L       HSF1      NR2C2 
+# 0.00000000 0.00000000 0.00000000 0.00000000 0.00000000 0.00000000 0.00000000 0.06713245 0.13705050 0.18539133 0.19237169 0.19415643 0.19872149 0.20081080 0.21710674 
+#     ZNF579      ZBTB1     SREBF1     TRIP13       ELK1       NFIB    SNRNP70       SIX5      KDM5A      GATA4      DEAF1      SIN3B     SREBF2     ZBTB11      NR2C1 
+# 0.22766175 0.23672360 0.23876616 0.23952705 0.24018308 0.24151580 0.24498140 0.24709852 0.24828427 0.25047444 0.25397523 0.25969872 0.26174316 0.26271190 0.26572221 
+#      U2AF2       ZHX1    NEUROD1       ZHX2      CLOCK      THAP1       TBX3     ZNF444      DNMT1   HNRNPUL1       MBD2        MYB      PYGO2       NFYA      MYBL2 
+# 0.27880310 0.28204803 0.28830772 0.28850858 0.28921240 0.28949187 0.29517898 0.29550188 0.30533913 0.30559464 0.30862844 0.30958979 0.31270353 0.31423388 0.32330026 
+#        FUS       IRF2      HNF1A      BRCA1      CCAR2      HCFC1      U2AF1      KDM4B      LCORL        PML     ZNF639   C11orf30       E2F8       IRF1       ETV4 
+# 0.32596047 0.32611519 0.32848801 0.32898536 0.32931626 0.33040578 0.33291103 0.33520237 0.33662313 0.33798046 0.33844819 0.33921015 0.34382158 0.35437338 0.35511585 
+#       E2F4      PTBP1    HNRNPH1      TAF9B     FIP1L1      RBM15      PHF20      KAT2B     ZNF407        SKI       IRF3      ZMIZ1      WHSC1     GABPB1       MTA1 
+# 0.35780500 0.35875745 0.36422950 0.36442032 0.36534116 0.36587670 0.36655521 0.36780622 0.36941421 0.37071390 0.37568567 0.38083615 0.38132851 0.38179542 0.38290865 
+#       ELF4    CREB3L1       KLF5      NCOA1     ZNF207       E2F7      CDC5L       BRD4     SETDB1       E2F1      ZFP91     NUFIP1      CREB1      SMAD1        RLF 
+# 0.38797300 0.38909986 0.38990940 0.39028978 0.39051027 0.39457011 0.39613587 0.40117644 0.41338221 0.41387791 0.41486673 0.41502731 0.41669251 0.41963330 0.42127003 
+#      NFRKB     ZNF217      SRSF4       RFX5   ARHGAP35        JUN      RBM25       E4F1      TFAP4       SAFB    ZKSCAN1      ZBTB2      RBM22       IRF5      SMAD5 
+# 0.42145720 0.42219646 0.42396963 0.42488144 0.42501095 0.42594840 0.42834849 0.43060161 0.43493865 0.43503536 0.43573429 0.43670259 0.43908004 0.43926818 0.44368921 
+#      EP400      ESRRA      GMEB1      FOXK2      STAT1       RFX1      NCOA4      KDM5B    SMARCB1     PRDM10      RBM14      NR2F1       AFF1      FOXP1       SOX6 
+# 0.44640317 0.44813140 0.45032698 0.45173002 0.45359828 0.45420430 0.46413470 0.46627403 0.47124101 0.47341415 0.47557089 0.47939871 0.48088473 0.48179285 0.48276162 
+#        SRF      PRPF4     ZNF282      STAT2       LEF1      NCOA6    ZNF512B       BRD9      RUNX1    TBL1XR1     ZBTB40       CBX1    SUPT20H     HNRNPL       AGO1 
+# 0.48330666 0.48455683 0.48463567 0.48536416 0.48544309 0.48630790 0.48696004 0.48710303 0.48849378 0.48957568 0.49035112 0.49085250 0.49282807 0.49485700 0.49597099 
+#        ZFX      SAP30      GATA1      HNF4G     PHF21A      GATA3       ETS1      TAF15       CBFB      RBM34      MEIS2     WRNIP1      NR3C1     NFE2L2       AGO2 
+# 0.49602075 0.49626368 0.49807393 0.50588481 0.50711685 0.50897917 0.50907716 0.51353008 0.51901004 0.51935251 0.52027538 0.52229062 0.52271228 0.52627927 0.52650264 
+#      HNF4A     ZNF184      HDAC3      MIER1      ZNF24       ESR1      HDAC1     ARID3A     TCF7L2      FOXM1     NFATC3        MNT      NCOR1      PCBP1     TRIM24 
+# 0.52837288 0.52914905 0.53227587 0.53423514 0.53451230 0.53895024 0.53907693 0.54374937 0.54559886 0.54587365 0.54643747 0.54784986 0.54796694 0.54961043 0.54980076 
+#       PBX3      XRCC5       ZEB2       RXRA     ZNF830       CBX3      NCOA2      FOXA2        RB1       CHD4       BCL3     POU2F2     CC2D1A       NFYB       BCOR 
+# 0.55056470 0.55213586 0.55257825 0.55305616 0.55376918 0.55412778 0.55443158 0.55526783 0.55587254 0.56170818 0.56302834 0.56450568 0.56606952 0.56633212 0.56896550 
+#       MTA3       MAFF      CTBP1      DACH1       PAX8      MEF2B      FOSL2       MYNN       UBTF       ATF4      FOSL1       SKIL    GATAD2A      RBM39     ZNF318 
+# 0.57077197 0.57407874 0.57567810 0.57824516 0.57927373 0.57942877 0.57963301 0.58130559 0.58176059 0.58280498 0.58327341 0.58500024 0.59041019 0.59321741 0.59454052 
+#      FOXA1    SMARCA5       THRA      NR2F2     POLR2G      SOX13    ZSCAN29      KLF16      NR2F6       TAL1     TRIM22       ELF1       RELB       ATF3       CREM 
+# 0.59535401 0.59628146 0.59662726 0.59688715 0.60128020 0.60140879 0.60375298 0.60435861 0.60490377 0.60830791 0.61006726 0.61078765 0.61100223 0.61543114 0.61642872 
+#      RAD51    ZNF280A     CHAMP1       ARNT       ATF7       TCF7      ARID2    SMARCE1      RCOR1        NBN     RBFOX2       MITF     HNRNPK        MYC      ZBTB5 
+# 0.61938051 0.61965882 0.62006865 0.62136246 0.62159317 0.62610401 0.62825108 0.62838409 0.62886857 0.62934876 0.63092253 0.63243057 0.63372915 0.63601136 0.63602717 
+#      TEAD4      GABPA     ZNF687       TAF7       NRF1     TRIM28      NCOA3      PCBP2     ZNF274     ZBTB7A       CUX1       USF2    HNRNPLL     ZNF384     ZNF592 
+# 0.63729075 0.63808594 0.64854978 0.64950214 0.65374443 0.65754849 0.65808507 0.65818973 0.66226798 0.66265162 0.66730932 0.66924667 0.67016367 0.67052040 0.67054444 
+#    GATAD2B       ATF2       DPF2    SMARCC2       MAFK      ZBED1       NFE2     STAT5A      MEF2C       SIX4      TCF12      SIRT6       ZEB1       EGR1      BACH1 
+# 0.67273774 0.67323942 0.67335307 0.67446693 0.67637780 0.67851234 0.67891726 0.67911634 0.68462940 0.69020147 0.69215766 0.69238873 0.69687519 0.69893231 0.70068286 
+#       USF1      ZMYM3       E2F6      TBX21       PAX5       MCM5     PKNOX1       IRF4      KDM1A       PHF8     ZNF143        MGA       NFIC     ZBTB8A       JUND 
+# 0.70085438 0.70109671 0.70252585 0.70501763 0.70696968 0.71418305 0.71477906 0.71701527 0.71963309 0.72392683 0.72447910 0.72474927 0.72495307 0.72545423 0.72593732 
+#       MCM7     ARID1B       REST      MLLT1     ZNF263      EHMT2       CHD1        MAX       MTA2       PHB2     ZNF316      IKZF1       HES1       ETV6        FOS 
+# 0.73582496 0.73812925 0.74075681 0.74622611 0.74763123 0.74907472 0.75047775 0.75202803 0.75498291 0.76122183 0.76494957 0.76507236 0.77575421 0.77593472 0.77933333 
+#    BHLHE40      HDAC2      IKZF2       MXI1     HMBOX1        SP1    L3MBTL2    SMARCA4      MEF2A       CBX5      STAT3     ZBTB33    CBFA2T2      CEBPB    CBFA2T3 
+# 0.78240793 0.78322041 0.78362806 0.78387893 0.79634869 0.80841203 0.81263043 0.81560307 0.82205416 0.82269597 0.82366361 0.83177828 0.83293674 0.83415219 0.83461098 
+#        EED        TBP      RUNX3      SIN3A        YY1     NFATC1       SMC3       SPI1       MCM2       TAF1      NANOG      EP300       BMI1      RAD21      NFXL1 
+# 0.83467804 0.83843876 0.84030245 0.84081304 0.84161188 0.84581719 0.86460297 0.87965257 0.89414960 0.90166748 0.90318802 0.93102734 0.93600410 0.97573832 0.98196454 
+#     BCL11A       JUNB      XRCC3       CTCF       BATF       EBF1     POLR2A      ASH2L      HDAC6      RBBP5      EWSR1      GATA2      SRSF7       RNF2      KDM4A 
+# 0.98951389 1.00004460 1.01128320 1.01647820 1.01785634 1.03158479 1.04118682 1.04247583 1.05195895 1.07309225 1.10402096 1.10696576 1.17046667 1.18861042 1.23716004 
+#        ATM       ZNF8       MCM3      COPS2       CHD7      KAT2A      SUZ12       EZH2       CBX8       CBX2 
+# 1.28990204 1.30512212 1.32193882 1.45299310 1.47222276 2.02580769 2.12930064 2.21950214 2.41570516 2.61349032 
+rm(Bb)
+##Seems very driven by CGIs
+
+##Panel 1 - As heatmap
+
+##do clustering
+c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
+c2<-hclust( as.dist( 1-cor(temp3) ),method="ward.D")
+r1<-hclust( dist(temp1),method="ward.D")
+c3<-hclust( as.dist( 1-cor(temp1) ),method="ward.D")
+c4<-cutree( hclust( as.dist( 1-cor(temp3) ),method="ward.D"),5)
+
+sample_anno<-data.frame(adj5000=as.character(c1),
+  #unadj5000=as.character(c4),
+  #ER=sampleAnno$ER,
+  #PR=sampleAnno$PR,
+  #HER2=sampleAnno$HER2,
+  TNBC=as.character(as.integer(sampleAnno$TNBC)),
+  PAM50=sampleAnno$pam50.full,stringsAsFactors=FALSE
+  )
+rownames(sample_anno)<-colnames(temp1)
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+r_anno<-data.frame(feature=sub(" .+","",annoObj[rownames(temp1),"featureClass"]),
+  island=annoObj[rownames(temp1),"cgiClass"],
+  Atac=as.character(annoObj[rownames(temp1),"hasAtacOverlap"]),
+  ESR1=as.character(tfMat[rownames(temp1),"ESR1"]),
+  FOXA1=as.character(tfMat[rownames(temp1),"FOXA1"]),
+  GATA3=as.character(tfMat[rownames(temp1),"GATA3"]),
+  EZH2=as.character(tfMat[rownames(temp1),"EZH2"]),
+  SUZ12=as.character(tfMat[rownames(temp1),"SUZ12"]),stringsAsFactors=FALSE
+  )
+rownames(r_anno)<-rownames(temp1)
+r_anno<-r_anno[,ncol(r_anno):1]
+
+my_colour = list(#unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    # ER = c("[Not Available]"="#FFFF33",
+    #   "[Not Evaluated]"="#FF7F00",
+    #   "Equivocal"="#377EB8",
+    #   "Indeterminate"="#984EA3",
+    #   "Negative"="#E41A1C",
+    #   "Positive"="#4DAF4A"
+    #   ),
+    # PR = c("[Not Available]"="#FFFF33",
+    #   "[Not Evaluated]"="#FF7F00",
+    #   "Equivocal"="#377EB8",
+    #   "Indeterminate"="#984EA3",
+    #   "Negative"="#E41A1C",
+    #   "Positive"="#4DAF4A"
+    #   ),
+    # HER2 = c("[Not Available]"="#FFFF33",
+    #   "[Not Evaluated]"="#FF7F00",
+    #   "Equivocal"="#377EB8",
+    #   "Indeterminate"="#984EA3",
+    #   "Negative"="#E41A1C",
+    #   "Positive"="#4DAF4A"
+    #   ),
+    TNBC = c("1"="black","0"="lightgrey"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"),
+    feature=c("distal"=brewer.pal(9,"Blues")[c(5)],"promoter"=brewer.pal(9,"Reds")[c(5)],"proximal"="white"),
+    island=c("ocean"=brewer.pal(9,"Blues")[c(5)],"shore"="white","cgi"=brewer.pal(9,"Reds")[c(5)]),
+    Atac=c("0"="white","1"=brewer.pal(9,"Greens")[c(5)]),
+    ESR1=c("0"="white","1"="orange"),
+    FOXA1=c("0"="white","1"="orange"),
+    GATA3=c("0"="white","1"="orange"),
+    EZH2=c("0"="white","1"="purple"),
+    SUZ12=c("0"="white","1"="purple")
+    ,stringsAsFactors=FALSE
+  )
+
+tiff(paste0(HOME,"/fig5_top5k_heatmap_pear_eucl_adjClust_adjBeta_withRowAnno.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_row=r_anno
+)
+dev.off()
+
+
+tiff(paste0(HOME,"/fig5_top5k_heatmap_pear_eucl_adjClust_unadjBeta_withRowAnno.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_row=r_anno
+)
+dev.off()
+
+tiff(paste0(HOME,"/fig5_top5k_heatmap_pear_eucl_adjClust_normBeta_withRowAnno.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_row=r_anno
+)
+dev.off()
+
+
+
+
 
 
 
