@@ -1996,10 +1996,608 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
+##first panel
+a1<-image_read(paste0(HOME,"/fig5_top5k_heatmap_pear_eucl_adjClust_adjBeta_withRowAnno.tiff"))
+a1<-image_crop(a1,"4380x6500")
+#a1<-image_scale(a1,"1000x")
 
+a2<-image_read(paste0(HOME,"/fig5_top5k_heatmap_pear_eucl_adjClust_unadjBeta_withRowAnno.tiff"))
+a2<-image_crop(a2,"4300x6500+700")
+#a2<-image_scale(a2,"1000x")
+#image_write(a2, path = paste0(HOME,"/fig5_temp.tiff"), format = "tiff")
 
+tiff(paste0(HOME,"/fig5_panel1_whitePadding.tiff"),width=.25*500,height=6500/500,units="px",res=500,compression="lzw")
+par(mar=c(0,0,0,0))
+plot(1,type="n",axes=F,xlab="",ylab="")
+dev.off()
+a3<-image_read(paste0(HOME,"/fig5_panel1_whitePadding.tiff"))
 
+out<-image_append(c(a1,a3,a2
+  ),stack = F)
+out<-image_scale(out,"4150x")
 
+image_write(out, path = paste0(HOME,"/fig5_mainHeatmapWithRowAnno_panel1.tiff"), format = "tiff")
+
+###Calculate beta difference pre/post correction for top5k by 5-cluster split and PAM50
+  #1. islands with ezh2+suz12
+  #2. ATAC with FOXA1+GATA3
+  #3. distal non-ATAC/TF
+
+##1.
+sel<-annoObj[rownames(temp1),"cgiClass"]=="cgi" & tfMat[rownames(temp1),"EZH2"]==1 & tfMat[rownames(temp1),"SUZ12"]==1
+
+table(sel)
+# sel
+# FALSE  TRUE 
+#  4109   891 
+
+##
+tiff(paste0(HOME,"/fig5_panel_cgiPcG.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(mar=c(6.1, 4.1, 3.1 ,2.1),fig=c(0,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2)
+plot(1,cex.main=1.75
+  ,type="n",xlab=""
+  ,main="CGI with ENCODE EZH2+SUZ12 (N=891)",ylab="Beta"
+  ,las=1,axes=F,xlim=c(0,35),ylim=c(0,1)
+  )
+abline(h=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
+abline(v=c(16,30),lty=c(2),lwd=3,col=1)
+##loop meth
+for(j in 1:5) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      pal<-c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j]
+      tmp<-temp1
+      kk<-paste0("adj ",j)
+    } else {
+      pal<-paste0(c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",j)
+    }
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,c1==j])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,c1==j]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,c1==j]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,c1==j]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,c1==j]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-1)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+
+  }
+}
+##loop pam50
+for(j in 19:16) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",i)
+    } else {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-paste0(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",i)
+    }
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,sampleAnno$pam50.full==i])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-15)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+  }
+}
+##loop tnbc
+for(j in 30:31) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-abs(30-j)
+      pal<-c("0"="#000000","1"="#E41A1C")[abs(29-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",c("Lum","TNBC")[i+1])
+    } else {
+      i<-abs(30-j)
+      pal<-paste0(c("0"="#000000","1"="#E41A1C")[abs(29-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",c("Lum","TNBC")[i+1])
+    }
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-29)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+  }
+}
+axis(2,lwd=2,las=1,at=seq(0,1,by=.5),font=2)
+#legend("topleft",legend=c("adjusted beta","unadjusted beta"),bty="n",col=c("#E41A1C","#377EB8"),lwd=3)
+
+##plus densplot
+
+##loop meth
+for(j in 1:5) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      pal<-c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j]
+      tmp<-temp1
+      kk<-paste0("adj ",j)
+    } else {
+      pal<-paste0(c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",j)
+    }
+  if(j==1) par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(0,.2,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==2) par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.2,.4,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==3) par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(0,.2,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==4) par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.2,.4,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==5) par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(0,.2,.05,.20),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,c1==j])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=j,col=pal,bty="n")
+  }
+}
+
+##loop pam50
+for(j in 19:16) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",i)
+    } else {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-paste0(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",i)
+    }
+  if(i=="Basal") par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.4,.6,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="LumB") par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.6,.8,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="LumA") par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.4,.6,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="Her2") par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.6,.8,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,sampleAnno$pam50.full==i])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=i,col=pal,bty="n")
+  }
+}
+##loop tnbc
+for(j in 30:31) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-abs(30-j)
+      pal<-c("0"="#000000","1"="#E41A1C")[abs(29-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",c("Lum","TNBC")[i+1])
+    } else {
+      i<-abs(30-j)
+      pal<-paste0(c("0"="#000000","1"="#E41A1C")[abs(29-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",c("Lum","TNBC")[i+1])
+    }
+  if(i==0) par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.8,1,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i==1) par(mar=c(0.5, 2.1, 0.1 ,0.1),fig=c(.8,1,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=c("Lum","TNBC")[i+1],col=pal,bty="n")
+  }
+}
+
+dev.off()
+
+##2.
+sel<-tfMat[rownames(temp1),"FOXA1"]==1 & tfMat[rownames(temp1),"GATA3"]==1 & annoObj[rownames(temp1),"hasAtacOverlap"]==1
+
+table(sel)
+# sel
+# FALSE  TRUE 
+#  4109   891 
+
+##
+tiff(paste0(HOME,"/fig5_panel_foxaGata.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(mar=c(6.1, 4.1, 3.1 ,2.1),fig=c(0,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2)
+plot(1,cex.main=1.75
+  ,type="n",xlab=""
+  ,main="TCGA ATAC with ENCODE FOXA1+GATA3 (N=53)",ylab="Beta"
+  ,las=1,axes=F,xlim=c(0,35),ylim=c(0,1)
+  )
+abline(h=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
+abline(v=c(16,30),lty=c(2),lwd=3,col=1)
+##loop meth
+for(j in 1:5) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      pal<-c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j]
+      tmp<-temp1
+      kk<-paste0("adj ",j)
+    } else {
+      pal<-paste0(c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",j)
+    }
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,c1==j])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,c1==j]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,c1==j]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,c1==j]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,c1==j]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-1)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+
+  }
+}
+##loop pam50
+for(j in 19:16) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",i)
+    } else {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-paste0(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",i)
+    }
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,sampleAnno$pam50.full==i])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-15)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+  }
+}
+##loop tnbc
+for(j in 30:31) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-abs(30-j)
+      pal<-c("0"="#000000","1"="#E41A1C")[abs(29-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",c("Lum","TNBC")[i+1])
+    } else {
+      i<-abs(30-j)
+      pal<-paste0(c("0"="#000000","1"="#E41A1C")[abs(29-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",c("Lum","TNBC")[i+1])
+    }
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-29)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+  }
+}
+axis(2,lwd=2,las=1,at=seq(0,1,by=.5),font=2)
+#legend("topleft",legend=c("adjusted beta","unadjusted beta"),bty="n",col=c("#E41A1C","#377EB8"),lwd=3)
+
+##plus densplot
+
+##loop meth
+for(j in 1:5) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      pal<-c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j]
+      tmp<-temp1
+      kk<-paste0("adj ",j)
+    } else {
+      pal<-paste0(c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",j)
+    }
+  if(j==1) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(0,.2,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==2) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.2,.4,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==3) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(0,.2,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==4) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.2,.4,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==5) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(0,.2,.05,.20),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,c1==j])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=j,col=pal,bty="n")
+  }
+}
+
+##loop pam50
+for(j in 19:16) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",i)
+    } else {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-paste0(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",i)
+    }
+  if(i=="Basal") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.4,.6,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="LumB") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.6,.8,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="LumA") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.4,.6,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="Her2") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.6,.8,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,sampleAnno$pam50.full==i])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=i,col=pal,bty="n")
+  }
+}
+##loop tnbc
+for(j in 30:31) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-abs(30-j)
+      pal<-c("0"="#000000","1"="#E41A1C")[abs(29-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",c("Lum","TNBC")[i+1])
+    } else {
+      i<-abs(30-j)
+      pal<-paste0(c("0"="#000000","1"="#E41A1C")[abs(29-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",c("Lum","TNBC")[i+1])
+    }
+  if(i==0) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.8,1,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i==1) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.8,1,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=c("Lum","TNBC")[i+1],col=pal,bty="n")
+  }
+}
+
+dev.off()
+
+##3. 
+sel<-sub(" .+","",annoObj[rownames(temp1),"featureClass"])=="distal" & rowSums(tfMat[rownames(temp1),])==0
+
+table(sel)
+# sel
+# FALSE  TRUE 
+#  4527   473 
+
+##
+tiff(paste0(HOME,"/fig5_panel_distalNoTf.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(mar=c(6.1, 4.1, 3.1 ,2.1),fig=c(0,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2)
+plot(1,cex.main=1.75
+  ,type="n",xlab=""
+  ,main="Distal without ENCODE TFBS (N=473)",ylab="Beta"
+  ,las=1,axes=F,xlim=c(0,35),ylim=c(0,1)
+  )
+abline(h=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
+abline(v=c(16,30),lty=c(2),lwd=3,col=1)
+##loop meth
+for(j in 1:5) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      pal<-c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j]
+      tmp<-temp1
+      kk<-paste0("adj ",j)
+    } else {
+      pal<-paste0(c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",j)
+    }
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,c1==j])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,c1==j]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,c1==j]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,c1==j]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-1)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,c1==j]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-1)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+
+  }
+}
+##loop pam50
+for(j in 19:16) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",i)
+    } else {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-paste0(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",i)
+    }
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,sampleAnno$pam50.full==i])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-15)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,sampleAnno$pam50.full==i]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-15)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+  }
+}
+##loop tnbc
+for(j in 30:31) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-abs(30-j)
+      pal<-c("0"="#000000","1"="#E41A1C")[abs(29-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",c("Lum","TNBC")[i+1])
+    } else {
+      i<-abs(30-j)
+      pal<-paste0(c("0"="#000000","1"="#E41A1C")[abs(29-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",c("Lum","TNBC")[i+1])
+    }
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(median(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i])),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),.25),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,.25),rep(quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),.75),2),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(.25,.25),y=quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),c(.25,.75)),lwd=3,col=pal)
+    lines(x=j+(2*(j-29)+1*(k-1))+c(-.25,-.25),y=quantile(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i]),c(.25,.75)),lwd=3,col=pal)
+    axis(1,at=j+(2*(j-29)+1*(k-1)),labels=kk,las=2,lwd=0,font=2,line=-1)
+  }
+}
+axis(2,lwd=2,las=1,at=seq(0,1,by=.5),font=2)
+#legend("topleft",legend=c("adjusted beta","unadjusted beta"),bty="n",col=c("#E41A1C","#377EB8"),lwd=3)
+
+##plus densplot
+
+##loop meth
+for(j in 1:5) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      pal<-c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j]
+      tmp<-temp1
+      kk<-paste0("adj ",j)
+    } else {
+      pal<-paste0(c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00")[j],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",j)
+    }
+  if(j==1) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(0,.2,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==2) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.2,.4,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==3) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(0,.2,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==4) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.2,.4,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(j==5) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(0,.2,.05,.20),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,c1==j])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=j,col=pal,bty="n")
+  }
+}
+
+##loop pam50
+for(j in 19:16) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",i)
+    } else {
+      i<-names(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"))[abs(15-j)]
+      pal<-paste0(c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3")[abs(15-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",i)
+    }
+  if(i=="Basal") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.4,.6,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="LumB") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.6,.8,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="LumA") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.4,.6,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i=="Her2") par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.6,.8,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,sampleAnno$pam50.full==i])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=i,col=pal,bty="n")
+  }
+}
+##loop tnbc
+for(j in 30:31) {
+  for(k in 1:2) {
+    #orig
+    if( k %%2==0) {
+      i<-abs(30-j)
+      pal<-c("0"="#000000","1"="#E41A1C")[abs(29-j)]
+      tmp<-temp1
+      kk<-paste0("adj ",c("Lum","TNBC")[i+1])
+    } else {
+      i<-abs(30-j)
+      pal<-paste0(c("0"="#000000","1"="#E41A1C")[abs(29-j)],"50")
+      tmp<-temp3
+      kk<-paste0("unadj ",c("Lum","TNBC")[i+1])
+    }
+  if(i==0) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.8,1,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  if(i==1) par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.8,1,.20,.35),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+  plot(1,
+    ,type="n",xlab="Beta"
+    ,main="",ylab="Density"
+    ,las=1,axes=F,xlim=c(-.1,1.1),ylim=c(0,5)
+    )
+  abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+  axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+  axis(2,at=seq(0,5,by=2.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+  lines(x=density(as.vector(tmp[sel,as.integer(sampleAnno$TNBC)==i])),lwd=3,col=pal)
+  text(x=.5,y=4.5,labels=c("Lum","TNBC")[i+1],col=pal,bty="n")
+  }
+}
+
+dev.off()
+
+##first panel
+a1<-image_read(paste0(HOME,"/fig5_mainHeatmapWithRowAnno_panel1.tiff"))
+
+a2<-image_read(paste0(HOME,"/fig5_panel_cgiPcG.tiff"))
+a2<-image_scale(a2,"4150x")
+
+a3<-image_read(paste0(HOME,"/fig5_panel_foxaGata.tiff"))
+a3<-image_scale(a3,"4150x")
+
+a4<-image_read(paste0(HOME,"/fig5_panel_distalNoTf.tiff"))
+a4<-image_scale(a4,"4150x")
+
+out<-image_append(c(a2,a3,a4
+  ),stack = F)
+out<-image_scale(out,"4150x")
+
+out<-image_append(c(a1,out
+  ),stack = T)
+
+image_write(out, path = paste0(HOME,"/fig5_final.tiff"), format = "tiff")
 
 
 ################################################################################
