@@ -2599,10 +2599,211 @@ out<-image_append(c(a1,out
 
 image_write(out, path = paste0(HOME,"/fig5_final.tiff"), format = "tiff")
 
+################################################################################
+################################################################################
+##Create CpG O/E plots for feature sets
 
-################################################################################
-################################################################################
-##Create CpG O/E plots
+##create reference distribution for proms and genome
+
+par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.8,1,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
+
+
+plot(1,type="n",main="",sub="",xlab="",ylab="scaled density",
+  axes=F,xlim=c(0,1.2),ylim=c(0,1)
+  )
+abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+axis(2,at=seq(0,1,by=.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+text(x=.5,y=4.5,labels=c("Lum","TNBC")[i+1],col=pal,bty="n")
+
+##global promoter
+dd<-density(annoObj[,"saxonovOE"][annoObj[,"isPromMostVariable"]==1])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=1,lwd=3,lty=2)
+
+dd<-density(annoObj[,"saxonovOE"][annoObj[,"hasAtacOverlap"]==1])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=2,lwd=3,lty=2)
+
+dd<-density(annoObj[rownames(temp1),"saxonovOE"][ annoObj[rownames(temp1),"isPromMostVariable"]==1 ])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=3,lwd=3)
+
+##atac
+plot(1,type="n",main="",sub="",xlab="",ylab="scaled density",
+  axes=F,xlim=c(0,1.2),ylim=c(0,1)
+  )
+abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
+axis(2,at=seq(0,1,by=.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
+text(x=.5,y=4.5,labels=c("Lum","TNBC")[i+1],col=pal,bty="n")
+
+dd<-density(annoObj[,"saxonovOE"][annoObj[,"hasAtacOverlap"]==1])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=1,lwd=3,lty=2)
+
+dd<-density(annoObj[rownames(temp1),"saxonovOE"][ annoObj[rownames(temp1),"hasAtacOverlap"]==1 ])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=1,lwd=3)
+
+
+dd<-density(annoObj[rownames(temp1),"saxonovOE"][ annoObj[rownames(temp1),"weberClass"]=="ICP" ])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=4,lwd=3)
+dd<-density(annoObj[rownames(temp1),"saxonovOE"][ annoObj[rownames(temp1),"cgiClass"]=="shore" ])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=5,lwd=3)
+dd<-density(annoObj[rownames(temp1),"saxonovOE"][ annoObj[rownames(temp1),"cgiClass"]=="ocean" ])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=5,lwd=3)
+
+
+
+
+
+
+
+dd<-density(annoObj[rownames(temp1),"saxonovOE"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=2,lwd=3)
+##atac
+dd<-density(annoObj[ annoObj[,"hasAtacOverlap"]==1 ,"saxonovOE"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=3,lwd=3)
+
+##atac - top5k
+dd<-density(annoObj[rownames(temp1),"saxonovOE"][ annoObj[rownames(temp1),"hasAtacOverlap"]==1 ])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=4,lwd=3)
+
+
+
+
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"weberClass"]=="ICP"]),col=2)
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"weberClass"]=="HCP"]),col=3)
+
+plot(density(annoObj[rownames(temp1),"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"cgiClass"]=="cgi"]),col=2)
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"cgiClass"]=="shore"]),col=3)
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"cgiClass"]=="ocean"]),col=4)
+
+plot(density(annoObj[rownames(temp1),"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"weberClass"]=="LCP"]),col=1)
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"weberClass"]=="ICP"]),col=2)
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"weberClass"]=="HCP"]),col=3)
+
+plot(density(annoObj[rownames(temp1),"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[rownames(temp1),"saxonovOE"][sel]),col=2)
+
+
+
+plot(density( as.vector(betaAdj[annoObj[,"weberClass"]=="LCP",]) ) ,ylim=c(0,5))
+
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"isPromMostVariable"]==1]),col=1)
+
+lines(density(annoObj[rownames(temp1),"saxonovOE"][sel]),col=2)
+
+
+plot(density( as.vector(betaAdj[annoObj[,"weberClass"]=="LCP",]) ) ,ylim=c(0,5))
+
+sub(" .+","",annoObj[,"featureClass"])=="distal" &  annoObj[,"cgiClass"]=="ocean"
+
+plot(density(annoObj[,"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[,"saxonovOE"][sub(" .+","",annoObj[,"featureClass"])=="distal" &  annoObj[,"cgiClass"]=="ocean"]),col=1)
+
+plot(density(annoObj[,"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[,"saxonovOE"][sub(" .+","",annoObj[,"featureClass"])=="distal"]),col=1)
+
+
+plot(density(annoObj[,"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[,"saxonovOE"][annoObj[,"cgiClass"]=="ocean"]),col=1)
+
+
+##1.
+sel<-annoObj[rownames(temp1),"cgiClass"]=="cgi" & tfMat[rownames(temp1),"EZH2"]==1 & tfMat[rownames(temp1),"SUZ12"]==1
+
+table(sel)
+# sel
+# FALSE  TRUE 
+#  4109   891 
+
+annoObj[rownames(temp1),"weberClass"] 
+
+table(annoObj[rownames(temp1),"weberClass"])
+
+
+##2.
+sel<-tfMat[rownames(temp1),"FOXA1"]==1 & tfMat[rownames(temp1),"GATA3"]==1 & annoObj[rownames(temp1),"hasAtacOverlap"]==1
+
+table(sel)
+# sel
+# FALSE  TRUE 
+#  4947    53 
+
+plot(density(annoObj[rownames(temp1),"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[rownames(temp1),"saxonovOE"][sel]),col=2)
+
+
+##3. 
+sel<-sub(" .+","",annoObj[rownames(temp1),"featureClass"])=="distal" & rowSums(tfMat[rownames(temp1),])==0 & annoObj[rownames(temp1),"cgiClass"]=="ocean"
+
+table(sel)
+# sel
+# FALSE  TRUE 
+#  4527   473 
+
+plot(density(annoObj[rownames(temp1),"saxonovOE"]),ylim=c(0,5))
+lines(density(annoObj[rownames(temp1),"saxonovOE"][sel]),col=2)
+
+ table(annoObj[rownames(temp1),"hasRepeatOverlap"],sel)
+
+
+plot(density(annoObj[rownames(temp1),"saxonovOE"]),ylim=c(0,5))
+
+lines(density(annoObj[,"saxonovOE"][annoObj[,"isPromMostVariable"]==1]),col=3)
+
+
+
+lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"isPromMostVariable"]==1]),col=1)
+
+lines(density(annoObj[rownames(temp1),"saxonovOE"][sel]),col=2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 all(rownames(betaData) %in% rownames(annoObj))
 #[1] TRUE
