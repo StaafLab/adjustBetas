@@ -2601,25 +2601,156 @@ image_write(out, path = paste0(HOME,"/fig5_final.tiff"), format = "tiff")
 
 ################################################################################
 ################################################################################
-##Create CpG O/E plots for feature sets
+
+
+
+##Same source as original probe mapping info but now migrated by creator [wanding.zhou@pennmedicine.upenn.edu]
+#http://zwdzwd.github.io/InfiniumAnnotation
+
+tmp<-tempfile()
+download.file("https://zwdzwd.s3.amazonaws.com/InfiniumAnnotation/20180909/HM450/HM450.hg19.manifest.tsv.gz",tmp)
+
+p.info<-read.table(tmp,sep="\t",header=T,as.is=T)
+rownames(p.info)<-p.info$probeID
+
+all(rownames(annoObj) %in% p.info$probeID)
+#[1] TRUE
+
+length(intersect(p.info$probeID , rownames(annoObj)))
+#[1] 421368
+
+p.info<-p.info[intersect(rownames(annoObj) , p.info$probeID),]
+
+dim(p.info)
+#[1] 421368     57
+
+all(rownames(annoObj) == p.info$probeID)
+#[1] TRUE
+
+unlink(tmp)
+
+################################################################################
+################################################################################
+##Create CpG O/E based analysis
+
+
+##O/E by type
+tiff(paste0(HOME,"/fig6_panel_a1.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(mar=c(5.1, 5.6, 4.1 ,.6),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",main="",sub="",xlab="",ylab="",
+  axes=F,xlim=c(0,1.6),ylim=c(0,1)
+  )
+abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
+axis(1,lwd=2,las=1,at=seq(0,1.5,by=.5),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+legend("topright",legend=c("I","II"),col=brewer.pal(9,"Oranges")[c(7,5)],bty="n",pch=15,cex=2)
+mtext("CpG O/E",side=1,at=.75,line=2.5,font=2,cex=2)
+mtext("Scaled density",side=2,line=4,font=2,cex=2)
+
+dd<-density(annoObj[,"saxonovOE"][p.info$designType=="I"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=brewer.pal(9,"Oranges")[c(7)],lwd=3,lty=1)
+
+dd<-density(annoObj[,"saxonovOE"][p.info$designType=="II"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=brewer.pal(9,"Oranges")[c(5)],lwd=3,lty=1)
+dev.off()
+
+##type by bin
+tiff(paste0(HOME,"/fig6_panel_a2.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+par(mar=c(5.1, 5.6, 4.1 ,.6),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+cgBins<-cut(annoObj[,"saxonovOE"],breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
+barplot( t( table(cgBins,p.info$designType) / rowSums(table(cgBins,p.info$designType)) ) ,col=brewer.pal(9,"Oranges")[c(7,5)],axes=F,axisnames=FALSE,xlim=c(0,140))
+legend("topright",legend=c("I","II"),col=brewer.pal(9,"Oranges")[c(7,5)],bty="n",pch=15,cex=2)
+axis(1,lwd=2,las=1,at=seq(0,120,by=60),labels=c("1","50","100"),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+mtext("100 CpG O/E bins",side=1,at=60,line=2.5,font=2,cex=2)
+mtext("Fraction",side=2,line=4,font=2,cex=2)
+dev.off()
+
+##meth by bin+type
+tiff(paste0(HOME,"/fig6_panel_a3.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+cgBins<-cut(annoObj[,"saxonovOE"],breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",main="",sub="",xlab="",ylab="",
+  axes=F,xlim=c(0,100),ylim=c(0,1)
+  )
+##I/II density
+dd<-density(cgBins[p.info$designType=="I"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=1)
+dd<-density(cgBins[p.info$designType=="II"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=2)
+##legends
+axis(1,lwd=2,las=1,at=seq(0,100,by=50),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+axis(4,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25,col="grey",col.axis="grey")
+mtext("100 CpG O/E bins",side=1,at=50,line=2.5,font=2,cex=2)
+mtext("Median beta",side=2,line=4,font=2,cex=2)
+mtext("Scaled density",side=4,line=4,font=2,cex=2,col="grey")
+legend("topright",legend=paste0(rep(c("adj","unadj"),each=2),c(" I"," II")),col=rep(brewer.pal(9,"Oranges")[c(7,5)],2),bty="n",lty=c(1,1,2,2),lwd=3,cex=2)
+legend(x=65,y=.45,legend=c(" I"," II"),col="grey",bty="n",lty=c(1,2),lwd=3,cex=2,text.col="grey")
+#adj
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],ncol(betaAdj))),median)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],ncol(betaAdj))),median)),col=brewer.pal(9,"Oranges")[5],lty=1,lwd=3)
+#orig
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],ncol(betaAdj))),median)),col=brewer.pal(9,"Oranges")[7],lty=2,lwd=3)
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],ncol(betaAdj))),median)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
+
+dev.off()
+
+##first panel
+a1<-image_read(paste0(HOME,"/fig6_panel_a1.tiff"))
+
+a2<-image_read(paste0(HOME,"/fig6_panel_a2.tiff"))
+
+a3<-image_read(paste0(HOME,"/fig6_panel_a3.tiff"))
+
+out<-image_append(c(a1,a2,a3
+  ),stack = F)
+out<-image_scale(out,"4150x")
+
+image_write(out, path = paste0(HOME,"/fig6_panel_a.tiff"), format = "tiff")
+
+
+
+##
+
+
+
+
+
 
 ##create reference distribution for proms and genome
 
-par(mar=c(0.5, 1.1, 0.5 ,1.1),fig=c(.8,1,.35,.5),font=2,font.axis=2,font.lab=2,font.sub=2,new=TRUE)
-
-
-plot(1,type="n",main="",sub="",xlab="",ylab="scaled density",
-  axes=F,xlim=c(0,1.2),ylim=c(0,1)
-  )
-abline(h=c(0),lty=c(1),lwd=3,col="lightgrey")
-axis(1,lwd=0,las=1,at=seq(0,1,by=.5),font=2,cex.axis=.5,line=-1.5)
-axis(2,at=seq(0,1,by=.5),lwd=0,las=1,font=2,cex.axis=.5,line=-.8)
-text(x=.5,y=4.5,labels=c("Lum","TNBC")[i+1],col=pal,bty="n")
-
-##global promoter
+##global promoter - most var
 dd<-density(annoObj[,"saxonovOE"][annoObj[,"isPromMostVariable"]==1])
 dd$y<-dd$y / max(dd$y)
-lines(dd,col=1,lwd=3,lty=2)
+lines(dd,col=brewer.pal(9,"Greens")[7],lwd=3,lty=2)
+
+##global promoter
+dd<-density(annoObj[,"saxonovOE"][sub(" body| up| dn","",annoObj$featureClass)=="promoter"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=brewer.pal(9,"Greens")[7],lwd=3,lty=1)
+
+##global proximal
+dd<-density(annoObj[,"saxonovOE"][sub(" body| up| dn","",annoObj$featureClass)=="proximal"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=brewer.pal(9,"Reds")[7],lwd=3,lty=1)
+
+##global distal
+dd<-density(annoObj[,"saxonovOE"][sub(" body| up| dn","",annoObj$featureClass)=="distal"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=brewer.pal(9,"Blues")[7],lwd=3,lty=1)
+
+##global 
+dd<-density(annoObj[,"saxonovOE"][sub(" body| up| dn","",annoObj$featureClass)=="distal"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col=brewer.pal(9,"blues")[7],lwd=3,lty=1)
+
+
+
 
 dd<-density(annoObj[,"saxonovOE"][annoObj[,"hasAtacOverlap"]==1])
 dd$y<-dd$y / max(dd$y)
@@ -2657,6 +2788,10 @@ dd<-density(annoObj[rownames(temp1),"saxonovOE"][ annoObj[rownames(temp1),"cgiCl
 dd$y<-dd$y / max(dd$y)
 lines(dd,col=5,lwd=3)
 
+
+
+paste0(sub(" body| up| dn","",annoObj$featureClass)
+annoObj$cgiClass
 
 
 
