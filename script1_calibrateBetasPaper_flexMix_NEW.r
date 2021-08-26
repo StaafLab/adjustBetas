@@ -2713,9 +2713,87 @@ out<-image_scale(out,"4150x")
 
 image_write(out, path = paste0(HOME,"/fig6_panel_a.tiff"), format = "tiff")
 
+##Second panel - methylation by subtype
+
+table(sampleAnno$pam50.full)
+# Basal  Her2  LumA  LumB 
+#   111   141   160   233 
+
+tiff(paste0(HOME,"/fig6_panel_b1.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+cgBins<-cut(annoObj[,"saxonovOE"],breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",main="",sub="",xlab="",ylab="",
+  axes=F,xlim=c(0,100),ylim=c(0,1)
+  )
+##legends
+axis(1,lwd=2,las=1,at=seq(0,100,by=50),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+axis(4,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25,col="grey",col.axis="grey")
+mtext("100 CpG O/E bins",side=1,at=50,line=2.5,font=2,cex=2)
+mtext("Median lumA beta",side=2,line=4,font=2,cex=2)
+mtext("Scaled density",side=4,line=4,font=2,cex=2,col="grey")
+legend("topright",legend=paste0(rep(c("adj","unadj"),each=2),c(" I"," II")),col=rep(brewer.pal(9,"Oranges")[c(7,5)],2),bty="n",lty=c(1,1,2,2),lwd=3,cex=2)
+#adj
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
+
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Greens")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Greens")[5],lty=2,lwd=3)
 
 
-##
+
+
+
+
+
+
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="LumA"]),rep(cgBins[p.info$designType=="I"],sum(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="LumA"]),rep(cgBins[p.info$designType=="II"],sum(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
+
+
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="LumB"]),rep(cgBins[p.info$designType=="I"],sum(sampleAnno$pam50.full=="LumB"))),sd)),col=brewer.pal(9,"Greens")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="LumB"]),rep(cgBins[p.info$designType=="II"],sum(sampleAnno$pam50.full=="LumB"))),sd)),col=brewer.pal(9,"Greens")[5],lty=1,lwd=3)
+
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="Her2"]),rep(cgBins[p.info$designType=="I"],sum(sampleAnno$pam50.full=="Her2"))),sd)),col=brewer.pal(9,"Blues")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="Her2"]),rep(cgBins[p.info$designType=="II"],sum(sampleAnno$pam50.full=="Her2"))),sd)),col=brewer.pal(9,"Blues")[5],lty=1,lwd=3)
+
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="Basal"]),rep(cgBins[p.info$designType=="I"],sum(sampleAnno$pam50.full=="Basal"))),sd)),col=brewer.pal(9,"Reds")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="Basal"]),rep(cgBins[p.info$designType=="II"],sum(sampleAnno$pam50.full=="Basal"))),sd)),col=brewer.pal(9,"Reds")[5],lty=1,lwd=3)
+
+
+
+
+lines(unlist(lapply(split(as.vector(betaAdj[,sampleAnno$pam50.full=="Basal"]),rep(cgBins,sum(sampleAnno$pam50.full=="Basal"))),sd)),col=brewer.pal(9,"Reds")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[,sampleAnno$pam50.full=="Basal"]),rep(cgBins,sum(sampleAnno$pam50.full=="Basal"))),median)),col=brewer.pal(9,"Reds")[5],lty=2,lwd=3)
+
+lines(unlist(lapply(split(as.vector(betaAdj[,sampleAnno$pam50.full!="Basal"]),rep(cgBins,sum(sampleAnno$pam50.full!="Basal"))),sd)),col=brewer.pal(9,"Greens")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[,sampleAnno$pam50.full!="Basal"]),rep(cgBins,sum(sampleAnno$pam50.full!="Basal"))),median)),col=brewer.pal(9,"Greens")[5],lty=1,lwd=3)
+
+
+
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="LumA"]),cgBins[p.info$designType=="I"]),mean)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="LumA"]),cgBins[p.info$designType=="II"]),mean)),col=brewer.pal(9,"Oranges")[5],lty=1,lwd=3)
+
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="LumB"]),cgBins[p.info$designType=="I"]),mean)),col=brewer.pal(9,"Greens")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="LumB"]),cgBins[p.info$designType=="II"]),mean)),col=brewer.pal(9,"Greens")[5],lty=1,lwd=3)
+
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="Her2"]),cgBins[p.info$designType=="I"]),mean)),col=brewer.pal(9,"Blues")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="Her2"]),cgBins[p.info$designType=="II"]),mean)),col=brewer.pal(9,"Blues")[5],lty=1,lwd=3)
+
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="I",sampleAnno$pam50.full=="Basal"]),cgBins[p.info$designType=="I"]),mean)),col=brewer.pal(9,"Reds")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(rowMeans(betaAdj[p.info$designType=="II",sampleAnno$pam50.full=="Basal"]),cgBins[p.info$designType=="II"]),mean)),col=brewer.pal(9,"Reds")[5],lty=1,lwd=3)
+
+
+
+#orig
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="I",sampleAnno$pam50.full=="LumA"]),rep(cgBins[p.info$designType=="I"],sum(sampleAnno$pam50.full=="LumA"))),median)),col=brewer.pal(9,"Oranges")[7],lty=2,lwd=3)
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="II",sampleAnno$pam50.full=="LumA"]),rep(cgBins[p.info$designType=="II"],sum(sampleAnno$pam50.full=="LumA"))),median)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
+
+dev.off()
+
+
+
+
 
 
 
