@@ -2982,6 +2982,14 @@ lines(density(annoObj[rownames(temp1),"saxonovOE"][annoObj[rownames(temp1),"isPr
 lines(density(annoObj[rownames(temp1),"saxonovOE"][sel]),col=2)
 
 
+################################################################################
+################################################################################
+
+##save.image(paste0(HOME,"/tempWorkspace_210830.RData")) ##remove later
+#load(paste0(HOME,"/tempWorkspace_210830.RData"))
+
+################################################################################
+################################################################################
 
 
 
