@@ -118,8 +118,9 @@ function (tumor.data, purity, K = 3, maxiter = 100, tol = 0.001)
 
 
 ########################################################
+myasin <- function(x) asin(2*x-1)
 
-function (tumor.data, normal.data, purity) 
+InfiniumPurify<-function (tumor.data, normal.data, purity) 
 {
     if (missing(tumor.data) | missing(normal.data) | missing(purity)) {
         stop("'tumor.data', 'normal.data' and 'purity' are required.")
@@ -151,4 +152,5 @@ function (tumor.data, normal.data, purity)
     colnames(tumor.data.corr) = tumor.sample
     tumor.data.corr
 }
+
 <environment: namespace:InfiniumPurify>

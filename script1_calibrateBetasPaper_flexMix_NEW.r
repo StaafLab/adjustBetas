@@ -93,7 +93,7 @@ source(paste0(GIT,"/function_correctBetas.r"))
 ################################################################################
 ##Get TCGA data object
 
-load(file=paste0(DATA,"/me/","finalWorkspace_atacCnGexMeWes_withAnnotations.RData"))
+load(file=paste0(DATA,"/","finalWorkspace_atacCnGexMeWes_withAnnotations.RData"))
 
 ls()
 #  [1] "adjustBeta" "annoObj"    "betaAdj"    "betaNorm"   "betaOrig"   "DATA"       "dataAtac"   "dataCn"     "dataMut"    "dataSeg"   
@@ -195,7 +195,6 @@ rownames(fracTum)<-fracTum$sample
 fracTum<-fracTum[key$array,]
 all(rownames(fracTum)==key$array)
 #[1] TRUE
-
 rownames(fracTum)<-key$id
 
 identical(rownames(fracTum),colnames(betaOrig))

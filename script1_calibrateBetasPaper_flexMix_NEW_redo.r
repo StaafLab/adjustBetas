@@ -19,12 +19,12 @@ DATA<-"I:/data/tcgaBrca"
 GIT<-"F:/gitProjects/adjustBetas"
 
 ##create data directories
-if( !file.exists( paste0(HOME,"/","adjustBetas") )   ) {
-  dir.create(paste0(HOME,"/","adjustBetas"),recursive=TRUE)
+if( !file.exists( paste0(HOME,"/","adjustBetas2") )   ) {
+  dir.create(paste0(HOME,"/","adjustBetas2/me"),recursive=TRUE)
 }
 
-HOME<-"~/hdd1/adjustBetas"
-HOME<-"I:/data/adjustBetas"
+HOME<-"~/hdd1/adjustBetas2"
+HOME<-"I:/data/adjustBetas2"
 
 ################################################################################
 ##load required packages
@@ -93,7 +93,7 @@ source(paste0(GIT,"/function_correctBetas.r"))
 ################################################################################
 ##Get TCGA data object
 
-load(file=paste0(DATA,"/me/","finalWorkspace_atacCnGexMeWes_withAnnotations.RData"))
+load(file=paste0(DATA,"/","finalWorkspace_atacCnGexMeWes_withAnnotations.RData"))
 
 ls()
 #  [1] "adjustBeta" "annoObj"    "betaAdj"    "betaNorm"   "betaOrig"   "DATA"       "dataAtac"   "dataCn"     "dataMut"    "dataSeg"   
@@ -167,12 +167,6 @@ str(annoObj)
 #  $ repeatFamily                 : chr  "" "" "" "" ...
 #  $ repeatName                   : chr  "" "" "" "" ...
 
-
-
-
-
-
-
 ##get sample key
 key<-read.table(file=paste0(DATA,"/me/data450k_arrayIDtoSampleId.txt"),header=FALSE,as.is=T,sep="\t",col.names=c("array","id"))
 
@@ -182,22 +176,27 @@ str(key)
 #  $ id   : chr  "TCGA-3C-AAAU-01A" "TCGA-3C-AALI-01A" "TCGA-3C-AALJ-01A" "TCGA-3C-AALK-01A" ...
 
 length(intersect(colnames(betaOrig),key$id))
-#[1] 645
+#[1] 632
+
+key$id2<-sub(".$","",key$id)
 
 rownames(key)<-key$id
 key<-key[colnames(betaOrig),]
 
+#rownames(key)<-key$id2
+
 ##get tumor fraction
-fracTum<-read.table(file=paste0(DATA,"/me/samplePurityVectorForFlexmixCorrection.txt"),header=TRUE,as.is=T,sep="\t")
+#fracTum<-read.table(file=paste0(DATA,"/me/samplePurityVector.txt"),header=TRUE,as.is=T,sep="\t")
+fracTum<-read.table(file=paste0(DATA,"/me/sampleTumorDnaFractionVector.txt"),header=TRUE,as.is=T,sep="\t")
 
 str(fracTum)
 # 'data.frame':   649 obs. of  2 variables:
-#  $ sample        : chr  "9993943013_R04C01" "9993943013_R01C02" "9993943005_R02C02" "9993943017_R01C01" ...
-#  $ tumor_fraction: num  0.81 0.64 0.53 0.61 0.47 0.53 0.83 0.47 0.44 0.64 ...
+#  $ sample            : chr  "TCGA-3C-AAAU-01" "TCGA-3C-AALI-01" "TCGA-3C-AALJ-01" "TCGA-3C-AALK-01" ...
+#  $ tumor_dna_fraction: num  0.85 0.73 0.69 0.62 0.64 0.53 0.89 0.47 0.56 0.65 ...
 
 rownames(fracTum)<-fracTum$sample
-fracTum<-fracTum[key$array,]
-all(rownames(fracTum)==key$array)
+fracTum<-fracTum[key$id2,]
+all(rownames(fracTum)==key$id2)
 #[1] TRUE
 
 rownames(fracTum)<-key$id
@@ -205,12 +204,12 @@ rownames(fracTum)<-key$id
 identical(rownames(fracTum),colnames(betaOrig))
 #[1] TRUE
 
-tmp<-fracTum$tumor_fraction
+tmp<-fracTum$tumor_dna_fraction
 names(tmp)<-rownames(fracTum)
 fracTum<-tmp
 
-HOME<-"~/hdd1/adjustBetas"
-HOME<-"I:/data/adjustBetas"
+HOME<-"~/hdd1/adjustBetas2"
+HOME<-"I:/data/adjustBetas2"
 
 rm(key)
 
@@ -218,12 +217,201 @@ rm(key)
 ##load data
 
 ##Load GSE67919 - 96 Normal breast samples
-load(paste0(HOME,"/data/","GSE67919_Annotations.RData"))
-load(paste0(HOME,"/data/","GSE67919_Beta.RData"))
+load("I:/data/luTnbc/data/files_js/GSE67919_Beta.RData")
+load("I:/data/luTnbc/data/files_js/GSE67919_Annotations.RData")
 
 annotations_norm<-annotations
 beta_norm<-beta
 rm(annotations,beta)
+
+##do Ringer-correction
+
+##get updated annotations
+hm.manifest<-readRDS( paste0(DATA,"/me/","HM450.hg38.manifest.rds") )
+
+##remove "unreliable" probes
+probesKeep<-cbind(id=names(hm.manifest),
+  chr=as.character(seqnames(hm.manifest)),
+  start=as.integer(start(hm.manifest)),
+  end=as.integer(end(hm.manifest)),
+  isBad=hm.manifest$MASK_general,
+  probeType=hm.manifest$probeType,
+  designType=hm.manifest$designType)
+
+head(probesKeep)
+#      id           chr    start   end     isBad  probeType designType
+# [1,] "cg13869341" "chr1" "15865" "15866" "TRUE" "cg"      "I"       
+# [2,] "cg14008030" "chr1" "18827" "18828" "TRUE" "cg"      "II"      
+# [3,] "cg12045430" "chr1" "29407" "29408" "TRUE" "cg"      "I"       
+# [4,] "cg20826792" "chr1" "29425" "29426" "TRUE" "cg"      "I"       
+# [5,] "cg00381604" "chr1" "29435" "29436" "TRUE" "cg"      "I"       
+# [6,] "cg20253340" "chr1" "68849" "68850" "TRUE" "cg"      "II"      
+
+probesKeep<-as.data.frame(probesKeep,stringsAsFactors=FALSE)
+rownames(probesKeep)<-probesKeep$id
+
+str(probesKeep)
+# 'data.frame': 485577 obs. of  7 variables:
+#  $ id        : chr  "cg13869341" "cg14008030" "cg12045430" "cg20826792" ...
+#  $ chr       : chr  "chr1" "chr1" "chr1" "chr1" ...
+#  $ start     : chr  "15865" "18827" "29407" "29425" ...
+#  $ end       : chr  "15866" "18828" "29408" "29426" ...
+#  $ isBad     : chr  "TRUE" "TRUE" "TRUE" "TRUE" ...
+#  $ probeType : chr  "cg" "cg" "cg" "cg" ...
+#  $ designType: chr  "I" "II" "I" "I" ...
+
+table(probesKeep$isBad,probesKeep$designType)
+  #            I     II
+  # FALSE 115147 306286
+  # TRUE   20354  43790
+
+probesKeep$start<-as.integer(probesKeep$start)
+probesKeep$end<-as.integer(probesKeep$end)
+probesKeep$isBad<-as.logical(probesKeep$isBad)
+
+isect<-intersect( rownames(betaOrig),rownames(probesKeep) )
+
+beta_norm<-beta_norm[isect,]
+
+probesKeep<-probesKeep[isect,]
+
+all.equal( rownames(beta_norm) , rownames(probesKeep) )
+#[1] TRUE
+all.equal( rownames(betaOrig) , rownames(probesKeep) )
+#[1] TRUE
+
+rm(isect)
+
+##beta object
+dim(beta_norm)
+#[1] 421368     96
+
+table(probesKeep$designType)
+#      I     II 
+# 115122 306246 
+
+##define probe subsets
+probes_I<- probesKeep$designType == "I"
+probes_II<- probesKeep$designType == "II"
+
+table(probes_I,probes_II)
+#         probes_II
+# probes_I  FALSE   TRUE
+#    FALSE      0 306246
+#    TRUE  115122      0
+
+##identify zero and one peak for respective probe sets and calibrate range of one to other
+
+##updated function for handling samples with non-canonical beta distributions
+findMaxima<-function(x,granularity=512,bw=.02,adjust=1,from=0,to=1,kernel="epanechnikov",verbose=TRUE) {
+  aa<-density(x,kernel=kernel,n=granularity,bw=bw,adjust=adjust,from=from,to=to,na.rm=T)
+  res<-vector(length=length(aa$x))
+  for(i in 2:length(res[-1])) {
+    res[i]<-aa$y[i]>aa$y[i-1] & aa$y[i]>aa$y[i+1]
+  }
+  y<-aa$x[res][order(aa$y[res],decreasing=T)] 
+  if(verbose) {
+    cat("found peaks at:",y,"\n")
+    cat("choosing min/max:",range(y),"\n") ###CHANGED here to pick out min-max peaks as these are typically the correct ones
+  }
+  range(y) 
+}
+
+##get original matrix
+betaData<-beta_norm
+
+##define results matrix
+meth.cal<-matrix(0,ncol=ncol(betaData),nrow=nrow(betaData))
+rownames(meth.cal)<-rownames(betaData)
+colnames(meth.cal)<-colnames(betaData)
+
+##define vector for flagging IDs
+flaggedIDs<-NULL
+
+pdf(file=paste0(HOME,"/me/","infiniumAdjustmentPlots.pdf"),width=8,height=8)
+par(mfrow=c(2,2),font=2,font.sub=2,font.lab=2,font.axis=2,las=1)
+sink(paste0(HOME,"/me/","infiniumAdjustmentStats.txt"))
+
+for ( i in 1:ncol(betaData)) {
+  cat("#####Sample ",i,":",colnames(betaData)[i],"\n")
+  ##do pre-calibaration I vs II plot
+  plot(density(betaData[probes_I,i],kernel="epanechnikov",bw=0.02,from=0,to=1,na.rm=T),main=colnames(betaData)[i],xlim=c(-.05,1.05),col="orange",lwd=3,xlab="pre-adjustment beta",cex.main=.9,ylim=c(0,8))
+  lines(density(betaData[probes_II,i],kernel="epanechnikov",bw=0.02,from=0,to=1,na.rm=T),col="darkgreen",lwd=3)
+
+  ##define maxima
+  tempMax_I<-findMaxima(betaData[probes_I,i])
+  tempMax_II<-findMaxima(betaData[probes_II,i])
+  ##function not oriented so peak near zero can be in vector slot 2 -> fix
+  tempMax_I<-tempMax_I[order(tempMax_I)]
+  tempMax_II<-tempMax_II[order(tempMax_II)]
+  ##add plot "FLAG" if peaks not well separated and close to right place..
+  FLAG<-FALSE
+  if( tempMax_I[1] >.2 | tempMax_I[2] <.8 | tempMax_II[1] >.2 | tempMax_II[2] <.8 ) {
+    FLAG<-TRUE
+    flaggedIDs<-c(flaggedIDs,colnames(betaData)[i])
+  }
+
+  ##add to plot
+  abline(v=tempMax_I,col="orange",lwd=2,lty=2)
+  abline(v=tempMax_II,col="darkgreen",lwd=2,lty=2)
+  text(x=.5,y=c(3.5,3),labels=c("Infinium_I ","Infinium_II"),col=c("orange","darkgreen"),font=2,cex=1)
+  if(FLAG)   text(x=.5,y=.5,labels=c("FLAGGED"),col=2,font=2,cex=2)
+
+  if(FLAG) {
+    cat("Something funky with this sample!!!\n")
+    cat("infinium_I peaks:",tempMax_I,"\n",sep="\t")
+    cat("infinium_II peaks:",tempMax_II,"\n",sep="\t")
+  } else {
+    cat("infinium_I peaks:",tempMax_I,"\n",sep="\t")
+    cat("infinium_II peaks:",tempMax_II,"\n",sep="\t")
+  }
+
+  ##do calibration scale both to same range..
+  meth.cal[probes_I,i]<-(betaData[probes_I,i]-tempMax_I[1])/(tempMax_I[2]-tempMax_I[1])
+  meth.cal[probes_II,i]<-(betaData[probes_II,i]-tempMax_II[1])/(tempMax_II[2]-tempMax_II[1])
+
+  ##cap ends so that nothing over 1 or below zero..
+  meth.cal[probes_I,i][meth.cal[probes_I,i] < 0 ]<-0
+  meth.cal[probes_I,i][meth.cal[probes_I,i] > 1 ]<-1
+  meth.cal[probes_II,i][meth.cal[probes_II,i] < 0 ]<-0
+  meth.cal[probes_II,i][meth.cal[probes_II,i] > 1 ]<-1
+
+  ##do post-calibration I vs II plot
+  plot(density(meth.cal[probes_I,i],kernel="epanechnikov",bw=0.02,from=0,to=1,na.rm=T),main=colnames(meth.cal)[i],xlim=c(-.05,1.05),col="orange",lwd=3,xlab="post-adjustment beta",cex.main=.9,ylim=c(0,8))
+  lines(density(meth.cal[probes_II,i],kernel="epanechnikov",bw=0.02,from=0,to=1,na.rm=T),col="darkgreen",lwd=3)
+  text(x=.5,y=c(3.5,3),labels=c("Infinium_I ","Infinium_II"),col=c("orange","darkgreen"),font=2,cex=1)
+  abline(v=findMaxima(meth.cal[probes_I,i],verbose=F),col="orange",lwd=2,lty=2)
+  abline(v=findMaxima(meth.cal[probes_II,i],verbose=F),col="darkgreen",lwd=2,lty=2)
+
+  cat("\n")
+} ; rm( list = c("i","tempMax_I","tempMax_II","FLAG") )
+cat("##FlaggedIDs:\n")
+cat(flaggedIDs,sep="\n")
+sink()
+dev.off()
+
+##some peaks not where they should be??
+flaggedIDs
+NULL
+
+writeLines(flaggedIDs,con=paste0(HOME,"/me/","infiniumAdjustmentFlaggedIDs.txt"))
+
+if(!is.null(flaggedIDs)) {
+  write(paste(sampleMat[flaggedIDs,"Sample_ID"],flaggedIDs,sep="\t"),file=paste0(HOME,"/me/","methylationSampleBlacklist.txt"),append=TRUE)
+}
+
+rm(probes_I)
+rm(probes_II)
+rm(findMaxima)
+
+##write adjusted table to file
+con<-gzfile(paste0(HOME,"/me/","infiniumAdjustedNormalizedData.txt.gz"),"w")
+write.table(meth.cal,file=con,sep="\t",quote=F)
+close(con)
+rm(con)
+
+beta_norm_adj<-meth.cal
+rm(meth.cal)
 
 ################################################################################
 ###Beta correction has been done already on all CpGs -> see how results change now..
@@ -231,10 +419,11 @@ rm(annotations,beta)
 ##filter X and get top5k
 betaData<-betaOrig
 
-all.equal(rownames(fracTum),colnames(betaData))
+all.equal(names(fracTum),colnames(betaData))
 #[1] TRUE
 
 all.equal(rownames(annoObj),rownames(betaData))
+#[1] TRUE
 
 table(annoObj$chr)
 #  chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 
@@ -268,10 +457,10 @@ length(intersect(varF,rownames(beta_norm)))
 testDat2<-betaData[varF,]
 
 str(testDat2)
- # num [1:5000, 1:645] 0.341 0.057 0.012 0.022 0 0.004 0.021 0.892 0.022 0.163 ...
+ # num [1:5000, 1:632] 0.341 0.057 0.012 0.022 0 0.004 0.021 0.892 0.022 0.163 ...
  # - attr(*, "dimnames")=List of 2
  #  ..$ : chr [1:5000] "cg09248054" "cg25340711" "cg06443533" "cg16601494" ...
- #  ..$ : chr [1:645] "TCGA-3C-AAAU-01A" "TCGA-3C-AALI-01A" "TCGA-3C-AALJ-01A" "TCGA-3C-AALK-01A" ...
+ #  ..$ : chr [1:632] "TCGA-3C-AAAU-01A" "TCGA-3C-AALI-01A" "TCGA-3C-AALJ-01A" "TCGA-3C-AALK-01A" ...
 
 ################################################################################
 ###correct betas using multicore
@@ -318,7 +507,7 @@ table( unlist(lapply(1:length(res),function(x) { all( unlist(res[[x]],use.names=
 # TRUE 
 # 5000 
 
-#save(res,file=paste0(HOME,"/2020918_object_adjustedBetas.RData"))
+save(res,file=paste0(HOME,"/results_object_adjustedBetas.RData"))
 
 ################################################################################
 ###gather adjusted data and calculate new data from it..
@@ -344,7 +533,7 @@ quantile(testDat2)
 
 quantile(temp4)
 #    0%   25%   50%   75%  100% 
-# 0.000 0.061 0.529 0.916 1.000 
+# 0.000 0.053 0.526 0.922 1.000 
 
 ##Plot histogram of betas before and after correction
 pdf(paste0(HOME,"/top5k_betaDistribution_tumors_beforeAfterCorrection.pdf"),width=8,height=8,useDingbats=F)
@@ -423,30 +612,48 @@ sample_anno<-sample_anno[,ncol(sample_anno):1]
 
 my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
     adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    ER = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+    ER = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
-    PR = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+      "Positive"="#4DAF4A"
+      ),
+    PR = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
-    HER2 = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+      "Positive"="#4DAF4A"
+      ),
+    HER2 = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
+      "Positive"="#4DAF4A"
+      ),
     TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
   )
+
+# my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+#     adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+#     ER = c("[Not Available]"="#FFFF33",
+#       "[Not Evaluated]"="#FF7F00",
+#       "Equivocal"="#377EB8",
+#       "Indeterminate"="#984EA3",
+#       "Negative"="#E41A1C",
+#       "Positive"="#4DAF4A",
+#       "NA"="white"),
+#     PR = c("[Not Available]"="#FFFF33",
+#       "[Not Evaluated]"="#FF7F00",
+#       "Equivocal"="#377EB8",
+#       "Indeterminate"="#984EA3",
+#       "Negative"="#E41A1C",
+#       "Positive"="#4DAF4A",
+#       "NA"="white"),
+#     HER2 = c("[Not Available]"="#FFFF33",
+#       "[Not Evaluated]"="#FF7F00",
+#       "Equivocal"="#377EB8",
+#       "Indeterminate"="#984EA3",
+#       "Negative"="#E41A1C",
+#       "Positive"="#4DAF4A",
+#       "NA"="white"),
+#     TNBC = c("1"="black","0"="lightgrey","NA"="white"),
+#     PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
+#   )
 
 tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
@@ -537,29 +744,20 @@ sample_anno<-sample_anno[,ncol(sample_anno):1]
 
 my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
     adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    ER = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+    ER = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
-    PR = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+      "Positive"="#4DAF4A"
+      ),
+    PR = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
-    HER2 = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+      "Positive"="#4DAF4A"
+      ),
+    HER2 = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A",
-      "NA"="white"),
+      "Positive"="#4DAF4A"
+      ),
     TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
   )
 
 tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
@@ -641,7 +839,7 @@ all(rownames(sampleAnno)==sub("-...$","",names(fracTum)))
 
 ##number of lists
 N<-100
-resMat<-matrix(ncol=9,nrow=N,dimnames=list(1:N,paste(c("acc","sen","spe"),rep(c(".raw",".adj",".dic"),each=3),sep="")) )
+resMat<-matrix(ncol=12,nrow=N,dimnames=list(1:N,paste(rep(c("acc","sen","spe"),4),rep(c(".raw",".adj",".dic",".ip"),each=3),sep="")) )
 
 ##generate 500 random CpG sets
 set.seed(20210705)
@@ -681,13 +879,56 @@ getSpec<-function(x,ref) {
   a1[which.max(a1)]
 }
 
+##InfiniumPurify functions - Adapted from https://github.com/Xiaoqizheng/InfiniumPurify
+myasin <- function(x) asin(2*x-1)
+
+InfiniumPurify<-function (tumor.data, normal.data, purity) 
+{
+    if (missing(tumor.data) | missing(normal.data) | missing(purity)) {
+        stop("'tumor.data', 'normal.data' and 'purity' are required.")
+    }
+    probes = intersect(rownames(tumor.data), rownames(normal.data))
+    tumor.sample = intersect(colnames(tumor.data), names(purity))
+    normal.sample = colnames(normal.data)
+    purity = purity[tumor.sample]
+    if (length(normal.sample) < 20 | length(tumor.sample) < 20) {
+        stop("tumor and normal samples should be more than 20!")
+    }
+    .get_corrBeta <- function(input) {
+        x = as.numeric(input[tumor.sample])
+        y = as.numeric(input[normal.sample])
+        type = c(rep("Tumor", length(x)), rep("Normal", length(y)))
+        data = data.frame(beta = c(x, y), type = type)
+        Y = myasin(data$beta)
+        X = c(1 - purity, rep(0, length(y)))
+        fit = lm(Y ~ X)
+        tmp = resid(fit) + coef(fit)[1]
+        beta.pred = (sin(tmp) + 1)/2
+        beta.pred
+    }
+    all.data = cbind(tumor.data[probes, tumor.sample], normal.data[probes, 
+        ])
+    probes.rmna = probes[rowSums(is.na(all.data)) == 0]
+    all.data.corr = t(apply(all.data[probes.rmna, ], 1, .get_corrBeta))
+    tumor.data.corr = all.data.corr[, 1:length(tumor.sample)]
+    colnames(tumor.data.corr) = tumor.sample
+    tumor.data.corr
+}
+
+###RUN
 set.seed(20210705)
 for (i in 1:N) {
   cat(i," of ",N,"\n")
   ##betaData filtered for chrX/Y
   betaRun<-cbind(seed=s_list[[i]],betaData[p_list[[i]],])
   betaNames<-colnames(betaData)
+  ##own method
   b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
+  ##infiniumPurify
+  temp5<-t( apply(beta_norm[p_list[[i]],],1,function(x) { x[is.na(x)]<-median(x[!is.na(x)]) ; return(x) } ) )
+  colnames(temp5)<-colnames(beta_norm)
+  c<-InfiniumPurify(tumor.data=betaData[p_list[[i]],],normal.data=temp5,purity=fracTum)
+
   ##adjusted
   b1<-do.call("rbind",lapply(b,function(x) x$y.tum))
     b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
@@ -700,6 +941,10 @@ for (i in 1:N) {
     b3<-do.call("rbind",lapply(b,function(x) x$y.orig>.3))
     b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
     b3<-cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2)
+    ##infPur
+    b4<-c
+    b4<-b4[!apply(b4,1,function(x) any(is.na(x))),]
+    b4<-cutree( hclust( as.dist(1-cor(b4)),"ward.D"), k=2)
 #     resMat[i,1]<- -log10(fisher.test(table(b2,sampleAnno$pam50.full != "Basal"))$p.value)
 #     resMat[i,2]<- -log10(fisher.test(table(b1,sampleAnno$pam50.full != "Basal"))$p.value)
 #     resMat[i,3]<- -log10(fisher.test(table(b3,sampleAnno$pam50.full != "Basal"))$p.value)
@@ -712,6 +957,9 @@ for (i in 1:N) {
   resMat[i,"acc.dic"]<-getAcc(b3,1+as.integer(sampleAnno$pam50.full == "Basal") )
   resMat[i,"sen.dic"]<-getSens(b3,1+as.integer(sampleAnno$pam50.full == "Basal") )
   resMat[i,"spe.dic"]<-getSpec(b3,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"acc.ip"]<-getAcc(b4,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"sen.ip"]<-getSens(b4,1+as.integer(sampleAnno$pam50.full == "Basal") )
+  resMat[i,"spe.ip"]<-getSpec(b4,1+as.integer(sampleAnno$pam50.full == "Basal") )
 }
 rm(b,b1,b2,b3,i,N,cl,betaRun,betaNames,getAcc,getSens,getSpec)
 
@@ -724,150 +972,91 @@ save(resMat,file=paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomS
 
 rm(varF)
 
-
-##tmp
-#load(paste0(HOME,"/top100percentBySd_basalVsLuminalSplitIn100randomSets_runResults.RData"))
-#load(paste0(HOME,"/tempWorkspace_210608.RData"))
-
 ################################################################################
 ################################################################################
-###redo plot for rand500 iterations
-
-##track sens+spec+acc for all iter
-
-# load(file=paste0(HOME,"/20191214_top100percentBySd_basalVsLuminalSplitIn100randomSets_UsedProbeSets.RData"))
-
-# ##do multicore
-# no_cores <- detectCores(logical = TRUE)
-
-# cat("using", no_cores-1,"cores","\n")
-
-# cl <- makeCluster(no_cores-1)  
-# registerDoParallel(cl)  
-
-# clusterEvalQ(cl, {
-#   library("flexmix")
-# })
-
-# #clusterSetRNGStream(cl, 20200918) ##will not make exactly replicable..
-
-# resMat2<-matrix(nrow=length(p_list),ncol=9)
-# colnames(resMat2)<-c("rawAcc","rawSens","rawSpec",
-#   "adjAcc","adjSens","adjSpec",
-#   "binAcc","binSens","binSpec")
-
-# set.seed(201012)
-# refStat<-factor(1+(tnbcClass$PAM50_AIMS != "Basal"))
-# for( i in 1:length(p_list)) {
-#      cat(".")
-#      if(i%%10==0)  cat(" ",i,"\n")
-
-#     ##betaData filtered for chrX/Y
-#   betaRun<-cbind(seed=sample(length(p_list[[i]])),betaData[p_list[[i]],samples_use])
-#   betaNames<-samples_use
-#   b<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
-#     #b<-parRapply(cl = cl, betaData[p_list[[i]],samples_use], adjustBeta,purity=fracTum2,snames=samples_use)
-
-#      ##unadjusted
-#      b1<-do.call("rbind",lapply(b,function(x) x$y.orig))
-#      b1<-b1[!apply(b1,1,function(x) any(is.na(x))),]
-#      b1<-factor(cutree( hclust( as.dist(1-cor(b1)),"ward.D"), k=2))
-#      r1<-confusionMatrix(b1,reference=refStat)
-#      r1<-c(r1$overall[1],r1$byClass[1:2])
-#      r1<-rbind(r1,1-r1)
-#      r1<-r1[which.max(r1[,1]),]
-#      resMat2[i,1:3]<-as.numeric(r1)
-#      ##adjusted
-#      b2<-do.call("rbind",lapply(b,function(x) x$y.tum))
-#      b2<-b2[!apply(b2,1,function(x) any(is.na(x))),]
-#      b2<-factor(cutree( hclust( as.dist(1-cor(b2)),"ward.D"), k=2))
-#      r1<-confusionMatrix(b2,reference=refStat)
-#      r1<-c(r1$overall[1],r1$byClass[1:2])
-#      r1<-rbind(r1,1-r1)
-#      r1<-r1[which.max(r1[,1]),]
-#      resMat2[i,4:6]<-as.numeric(r1)
-#      ##dichotomized
-#      b3<-do.call("rbind",lapply(b,function(x) x$y.orig > .3))
-#      b3<-b3[!apply(b3,1,function(x) any(is.na(x))),]
-#      b3<-factor(cutree( hclust( as.dist(1-cor(b3)),"ward.D"), k=2))
-#      r1<-confusionMatrix(b3,reference=refStat)
-#      r1<-c(r1$overall[1],r1$byClass[1:2])
-#      r1<-rbind(r1,1-r1)
-#      r1<-r1[which.max(r1[,1]),]
-#      resMat2[i,7:9]<-as.numeric(r1)
-# }     
-     
-# rm(i,p_list,b,b1,b2,b3,r1,refStat,cl,betaRun,betaNames)
+###Do plots
 
 resMat2<-resMat
 
 pdf(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
-boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
+boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,11.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
   main="Discrimination of PAM50 Basal vs Luminal split"
 )
 abline(h=0,lwd=3,col="lightgrey",lty=2)
 boxplot(resMat2[,7]-resMat2[,1],at=2,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,10]-resMat2[,1],at=3,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,5]-resMat2[,2],at=4,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,5]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8]-resMat2[,2],at=6,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,11]-resMat2[,2],at=7,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,6]-resMat2[,3],at=7,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9]-resMat2[,3],at=8,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,6]-resMat2[,3],at=9,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9]-resMat2[,3],at=10,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,12]-resMat2[,3],at=11,add=T,width=2,axes=F,lwd=2)
 
-axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
   labels=c("Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
-  "Beta>0.3")
+  "Beta>0.3",
+  "InfiniumPurify")
 )
 axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
 mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.85,.85),lwd=3)
-text(1.5,.85,labels="Accuracy",pos=3)
+lines(x=c(1,3),y=c(.85,.85),lwd=3)
+text(2,.85,labels="Accuracy",pos=3)
 
-lines(x=c(4,5),y=c(.85,.85),lwd=3)
-text(4.5,.85,labels="Sensitivity",pos=3)
+lines(x=c(5,7),y=c(.85,.85),lwd=3)
+text(6,.85,labels="Sensitivity",pos=3)
 
-lines(x=c(7,8),y=c(.85,.85),lwd=3)
-text(7.5,.85,labels="Specificity",pos=3)
+lines(x=c(9,11),y=c(.85,.85),lwd=3)
+text(10,.85,labels="Specificity",pos=3)
 
 ##absolute terms
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
 
-boxplot(resMat2[,4],at=1,xlim=c(0.5,8.5),ylim=c(0,1),width=2,axes=F,lwd=2,
+boxplot(resMat2[,4],at=1,xlim=c(0.5,11.5),ylim=c(0,1),width=2,axes=F,lwd=2,
   main="Discrimination of PAM50 Basal vs Luminal split"
 )
 #abline(h=0,lwd=3,col="lightgrey",lty=2)
 boxplot(resMat2[,7],at=2,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,10],at=3,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,5],at=4,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,5],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8],at=6,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,11],at=7,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,6],at=7,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9],at=8,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,6],at=9,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9],at=10,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,12],at=11,add=T,width=2,axes=F,lwd=2)
 
-axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
   labels=c("Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
-  "Beta>0.3")
+  "Beta>0.3",
+  "InfiniumPurify")
 )
 axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
 mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.05,.05),lwd=3)
-text(1.5,.05,labels="Accuracy",pos=3)
+lines(x=c(1,3),y=c(.05,.05),lwd=3)
+text(2,.05,labels="Accuracy",pos=3)
 
-lines(x=c(4,5),y=c(.05,.05),lwd=3)
-text(4.5,.05,labels="Sensitivity",pos=3)
+lines(x=c(5,7),y=c(.05,.05),lwd=3)
+text(6,.05,labels="Sensitivity",pos=3)
 
-lines(x=c(7,8),y=c(.05,.05),lwd=3)
-text(7.5,.05,labels="Specificity",pos=3)
+lines(x=c(9,11),y=c(.05,.05),lwd=3)
+text(10,.05,labels="Specificity",pos=3)
 
 dev.off()
 
@@ -875,70 +1064,82 @@ dev.off()
 tiff(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"),width=12*500,height=12*500,units="px",res=500,compression="lzw")
 par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
-boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,8.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
+boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,11.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
   main="Discrimination of PAM50 Basal vs Luminal split"
 )
 abline(h=0,lwd=3,col="lightgrey",lty=2)
 boxplot(resMat2[,7]-resMat2[,1],at=2,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,10]-resMat2[,1],at=3,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,5]-resMat2[,2],at=4,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,5]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8]-resMat2[,2],at=6,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,11]-resMat2[,2],at=7,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,6]-resMat2[,3],at=7,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9]-resMat2[,3],at=8,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,6]-resMat2[,3],at=9,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9]-resMat2[,3],at=10,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,12]-resMat2[,3],at=11,add=T,width=2,axes=F,lwd=2)
 
-axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
   labels=c("Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
-  "Beta>0.3")
+  "Beta>0.3",
+  "InfiniumPurify")
 )
 axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
 mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.85,.85),lwd=3)
-text(1.5,.85,labels="Accuracy",pos=3)
+lines(x=c(1,3),y=c(.85,.85),lwd=3)
+text(2,.85,labels="Accuracy",pos=3)
 
-lines(x=c(4,5),y=c(.85,.85),lwd=3)
-text(4.5,.85,labels="Sensitivity",pos=3)
+lines(x=c(5,7),y=c(.85,.85),lwd=3)
+text(6,.85,labels="Sensitivity",pos=3)
 
-lines(x=c(7,8),y=c(.85,.85),lwd=3)
-text(7.5,.85,labels="Specificity",pos=3)
+lines(x=c(9,11),y=c(.85,.85),lwd=3)
+text(10,.85,labels="Specificity",pos=3)
 
 ##absolute terms
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
 
-boxplot(resMat2[,4],at=1,xlim=c(0.5,8.5),ylim=c(0,1),width=2,axes=F,lwd=2,
+boxplot(resMat2[,4],at=1,xlim=c(0.5,11.5),ylim=c(0,1),width=2,axes=F,lwd=2,
   main="Discrimination of PAM50 Basal vs Luminal split"
 )
 #abline(h=0,lwd=3,col="lightgrey",lty=2)
 boxplot(resMat2[,7],at=2,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,10],at=3,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,5],at=4,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,5],at=5,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,8],at=6,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,11],at=7,add=T,width=2,axes=F,lwd=2)
 
-boxplot(resMat2[,6],at=7,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9],at=8,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,6],at=9,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,9],at=10,add=T,width=2,axes=F,lwd=2)
+boxplot(resMat2[,12],at=11,add=T,width=2,axes=F,lwd=2)
 
-axis(1,at=c(1:2,4:5,7:8),lwd=2,las=2,cex=1.2,
+axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
   labels=c("Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
   "Beta>0.3",
+  "InfiniumPurify",
   "Adjusted",
-  "Beta>0.3")
+  "Beta>0.3",
+  "InfiniumPurify")
 )
 axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
 mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
-lines(x=c(1,2),y=c(.05,.05),lwd=3)
-text(1.5,.05,labels="Accuracy",pos=3)
+lines(x=c(1,3),y=c(.05,.05),lwd=3)
+text(2,.05,labels="Accuracy",pos=3)
 
-lines(x=c(4,5),y=c(.05,.05),lwd=3)
-text(4.5,.05,labels="Sensitivity",pos=3)
+lines(x=c(5,7),y=c(.05,.05),lwd=3)
+text(6,.05,labels="Sensitivity",pos=3)
 
-lines(x=c(7,8),y=c(.05,.05),lwd=3)
-text(7.5,.05,labels="Specificity",pos=3)
+lines(x=c(9,11),y=c(.05,.05),lwd=3)
+text(10,.05,labels="Specificity",pos=3)
 
 dev.off()
 
@@ -1078,7 +1279,7 @@ my_colour = list(unadj500=c("1"="#E41A1C","2"="#377EB8"),
     adj500=c("1"="#E41A1C","2"="#377EB8"),
     #adj5000=c("a"="red","b"="pink","c"="darkgreen","d"="orange","e"="grey"),
     #umap = c("1" = "#5977ff", "2" = "#f74747"),
-    PAM50 = c("Basal" = "red" , "Her2" = "pink" , "LumA" = "darkgreen" , "LumB" = "orange" , "Normal" = "grey")
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white")
     #TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
@@ -1162,7 +1363,177 @@ rm(c1,c2,c3,c4,c5,r1,b,b1,b2,b3,cl)
 
 gc()
 
-################################################################################ ##HERE!!!
+################################################################################
+################################################################################
+##Create sFig image - With infiniumPurify added
+
+##Panel 1 - Correction top5k, unadj clust 3-panel                             ##
+
+##check stats
+temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
+temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
+temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
+set.seed(12345)
+temp5<-t( apply(beta_norm[rownames(temp1),],1,function(x) { x[is.na(x)]<-median(x[!is.na(x)]) ; return(x) } ) )
+colnames(temp5)<-paste0("s",1:96)
+temp5<-InfiniumPurify(tumor.data=betaData[rownames(temp1),],normal.data=temp5,purity=fracTum)
+
+table(apply(temp1,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp2,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp3,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp4,1,function(x) sum(is.na(x))))
+#    0    1    2    3    4    5    6    7    8   10   11   12   17   40   60 
+# 4085  470  200  110   59   31   16    8    7    3    6    2    1    1    1 
+
+table(annoObj[rownames(temp1),"chr"])
+ # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
+ #  557   272   213   255   156   144    98   169   272    69   205   365   130    43    54   248   192 
+ # chr5  chr6  chr7  chr8  chr9 
+ #  370   392   386   353    57 
+
+##do clustering
+c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
+c2<-hclust( as.dist( 1-cor(temp4) ),method="ward.D")
+r1<-hclust( dist(temp1),method="ward.D")
+c3<-hclust( as.dist( 1-cor(temp1) ),method="ward.D")
+c4<-cutree( hclust( as.dist( 1-cor(temp3) ),method="ward.D"),5)
+c5<-cutree( hclust( as.dist( 1-cor(temp5) ),method="ward.D"),5)
+
+sample_anno<-data.frame(adj5000=as.character(c1),
+  infPur5000=as.character(c5),
+  unadj5000=as.character(c4),
+  ER=sampleAnno$ER,
+  PR=sampleAnno$PR,
+  HER2=sampleAnno$HER2,
+  TNBC=as.character(as.integer(sampleAnno$TNBC)),
+  PAM50=sampleAnno$pam50.full,stringsAsFactors=FALSE
+  )
+rownames(sample_anno)<-colnames(temp1)
+sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    ER = c("NA"="#FF7F00",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A"
+      ),
+    PR = c("NA"="#FF7F00",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A"
+      ),
+    HER2 = c("NA"="#FF7F00",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A"
+      ),
+    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
+  )
+
+tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp5,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, \"infiniumPurify\", adj clust , pearCol/euclRow",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp5,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, \"infiniumPurify\", adj clust , pearCol/euclRow",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, unadj data, adj clust , pearCol/euclRow",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, adj data, adj clust , pearCol/euclRow",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
+  ,main="top 5000 by sd, \"inferred normal\", adj clust , pearCol/euclRow",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
+tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_whitePadding.tiff"),width=4115/500,height=250,units="px",res=500,compression="lzw")
+par(mar=c(0,0,0,0))
+plot(1,type="n",axes=F,xlab="",ylab="")
+dev.off()
+a6<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_whitePadding.tiff"))
+
+##cut away anno legend from 2/3 paste together to form image..
+a1<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"))
+a1<-image_crop(a1,"4115x6375+0+125")
+a1<-image_append(c(a6,a1),stack = T)
+a1<-image_annotate(a1, "Inferred normal", size = 200, gravity = "north", color = "black")
+
+a2<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"))
+a2<-image_crop(a2,"4115x6375+0+125")
+a2<-image_append(c(a6,a2),stack = T)
+a2<-image_annotate(a2, "Unadjusted beta", size = 200, gravity = "north", color = "black")
+
+a11<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"))
+a11<-image_crop(a11,"4115x6375+0+125")
+a11<-image_append(c(a6,a11),stack = T)
+a11<-image_annotate(a11, "InfiniumPurify", size = 200, gravity = "north", color = "black")
+
+a3<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"))
+a3<-image_crop(a3,"5000x6375+0+125")
+a3<-image_append(c(a6,a3),stack = T)
+a3<-image_annotate(a3, "Adjusted beta", size = 200, gravity = "north", color = "black")
+
+tiff(paste0(HOME,"/fig3_top5k_heatmap_whitePadding.tiff"),width=.25*500,height=6375/500,units="px",res=500,compression="lzw")
+par(mar=c(0,0,0,0))
+plot(1,type="n",axes=F,xlab="",ylab="")
+dev.off()
+a4<-image_read(paste0(HOME,"/fig3_top5k_heatmap_whitePadding.tiff"))
+
+tiff(paste0(HOME,"/fig3_top5k_heatmap_whitePadding2.tiff"),width=4150,height=.1*500,units="px",res=500,compression="lzw")
+par(mar=c(0,0,0,0))
+plot(1,type="n",axes=F,xlab="",ylab="")
+dev.off()
+a5<-image_read(paste0(HOME,"/fig3_top5k_heatmap_whitePadding2.tiff"))
+
+out<-image_append(c(a4,a1,a4,
+  a2,a4,a11,a4,
+  a3
+  ),stack = F)
+out<-image_scale(out,"4150x")
+
+out<-image_append(c(a5,out
+  ),stack = T)
+
+image_write(out, path = paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_combined.tiff"), format = "tiff")
+
+rm(a1,a2,a3,a4,a5,a11,out)
+rm(c1,c2,c3,c4,r1,temp1,temp2,temp3,temp4)
+
+gc()
+
+
+
+
+################################################################################ 
 ################################################################################
 ##Create Fig 3 panels and image - Real life correction example
 
@@ -1211,31 +1582,22 @@ sample_anno<-data.frame(adj5000=as.character(c1),
 rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
-    ER = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
+    ER = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    PR = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+    PR = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    HER2 = c("[Not Available]"="#FFFF33",
-      "[Not Evaluated]"="#FF7F00",
-      "Equivocal"="#377EB8",
-      "Indeterminate"="#984EA3",
+    HER2 = c("NA"="#FF7F00",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    TNBC = c("1"="black","0"="lightgrey"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"),stringsAsFactors=FALSE
+    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
   )
 
 tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
@@ -1337,29 +1699,29 @@ length(ff)
 
 #plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]) )
 
-table(apply(beta_norm[ff,],1,function(z) any(is.na(z))))
+table(apply(beta_norm_adj[ff,],1,function(z) any(is.na(z))))
 # FALSE  TRUE 
 #  4085   915 
 
-table(apply(beta_norm[ff,],1,function(z) sum(is.na(z))))
+table(apply(beta_norm_adj[ff,],1,function(z) sum(is.na(z))))
 #    0    1    2    3    4    5    6    7    8   10   11   12   17   40   60 
 # 4085  470  200  110   59   31   16    8    7    3    6    2    1    1    1 
 
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE) )
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE) )
 dev.off()
 
 ##will change slightly if rerun - not deterministic..
-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE) )
+cor( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE) )
 #[1] 0.9250216
 (cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="spe" ))
 #[1] 0.133569
-(cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),method="spe" ))
+(cor( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE),method="spe" ))
 #[1] 0.8848514
 (cor( rowMeans(temp2[ff,]),rowMeans(temp1[ff,]),method="pe" ))
 #[1] 0.01715253
-(sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),method="pe" ))
+(sf<-cor( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE),method="pe" ))
 #[1] 0.9250216
-(fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),method="pe" )$p.value)
+(fs<-cor.test( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE),method="pe" )$p.value)
 #[1] 0
 
 length(ff)
@@ -1367,28 +1729,28 @@ length(ff)
 
 pdf(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),pch=16
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE),pch=16
   ,main=""
   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
  )
-points(rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16)
+points(rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,]),pch=16)
 text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(beta_norm[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+abline(lm(rowMeans(beta_norm_adj[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
 axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
 axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
 dev.off()
 
 tiff(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,],na.rm=TRUE),pch=16
+plot( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE),pch=16
   ,main=""
   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
  )
-points(rowMeans(temp2[ff,]),rowMeans(beta_norm[ff,]),pch=16)
+points(rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,]),pch=16)
 text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(beta_norm[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+abline(lm(rowMeans(beta_norm_adj[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
 axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
 axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
 dev.off()
@@ -1624,7 +1986,7 @@ betaNorm2<-betaNorm[ !annoObj$chr %in% c("chrY") &
    annoObj$illuminaCpG_CpH_Probe == "cg"
 ,]
 
-beta_norm2<-beta_norm[rownames(annoObj),]
+beta_norm2<-beta_norm_adj[rownames(annoObj),]
 beta_norm2<-beta_norm2[ !annoObj$chr %in% c("chrY") &
    annoObj$illuminaCpG_CpH_Probe == "cg"
 ,]
@@ -1963,7 +2325,7 @@ my_colour = list(#unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#98
     #   "Positive"="#4DAF4A"
     #   ),
     TNBC = c("1"="black","0"="lightgrey"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),
     feature=c("distal"=brewer.pal(9,"Blues")[c(5)],"promoter"=brewer.pal(9,"Reds")[c(5)],"proximal"="white"),
     island=c("ocean"=brewer.pal(9,"Blues")[c(5)],"shore"="white","cgi"=brewer.pal(9,"Reds")[c(5)]),
     Atac=c("0"="white","1"=brewer.pal(9,"Greens")[c(5)]),
@@ -2606,8 +2968,6 @@ image_write(out, path = paste0(HOME,"/fig5_final.tiff"), format = "tiff")
 ################################################################################
 ################################################################################
 
-
-
 ##Same source as original probe mapping info but now migrated by creator [wanding.zhou@pennmedicine.upenn.edu]
 #http://zwdzwd.github.io/InfiniumAnnotation
 
@@ -2800,6 +3160,20 @@ dev.off()
 
 
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 
 
