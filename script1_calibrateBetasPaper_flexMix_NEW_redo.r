@@ -1387,9 +1387,6 @@ table(apply(temp2,1,function(x) sum(is.na(x))))
 table(apply(temp3,1,function(x) sum(is.na(x))))
 #   0
 #5000
-table(apply(temp4,1,function(x) sum(is.na(x))))
-#    0    1    2    3    4    5    6    7    8   10   11   12   17   40   60 
-# 4085  470  200  110   59   31   16    8    7    3    6    2    1    1    1 
 
 table(annoObj[rownames(temp1),"chr"])
  # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
@@ -1399,7 +1396,6 @@ table(annoObj[rownames(temp1),"chr"])
 
 ##do clustering
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
-c2<-hclust( as.dist( 1-cor(temp4) ),method="ward.D")
 r1<-hclust( dist(temp1),method="ward.D")
 c3<-hclust( as.dist( 1-cor(temp1) ),method="ward.D")
 c4<-cutree( hclust( as.dist( 1-cor(temp3) ),method="ward.D"),5)
