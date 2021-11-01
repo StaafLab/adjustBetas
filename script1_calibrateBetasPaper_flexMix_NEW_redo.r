@@ -167,51 +167,24 @@ str(annoObj)
 #  $ repeatFamily                 : chr  "" "" "" "" ...
 #  $ repeatName                   : chr  "" "" "" "" ...
 
-##get sample key
-key<-read.table(file=paste0(DATA,"/me/data450k_arrayIDtoSampleId.txt"),header=FALSE,as.is=T,sep="\t",col.names=c("array","id"))
-
-str(key)
-# 'data.frame':   669 obs. of  2 variables:
-#  $ array: chr  "9993943013_R04C01" "9993943013_R01C02" "9993943005_R02C02" "9993943017_R01C01" ...
-#  $ id   : chr  "TCGA-3C-AAAU-01A" "TCGA-3C-AALI-01A" "TCGA-3C-AALJ-01A" "TCGA-3C-AALK-01A" ...
-
-length(intersect(colnames(betaOrig),key$id))
-#[1] 632
-
-key$id2<-sub(".$","",key$id)
-
-rownames(key)<-key$id
-key<-key[colnames(betaOrig),]
-
-#rownames(key)<-key$id2
-
 ##get tumor fraction
 #fracTum<-read.table(file=paste0(DATA,"/me/samplePurityVector.txt"),header=TRUE,as.is=T,sep="\t")
 fracTum<-read.table(file=paste0(DATA,"/me/sampleTumorDnaFractionVector.txt"),header=TRUE,as.is=T,sep="\t")
 
 str(fracTum)
-# 'data.frame':   649 obs. of  2 variables:
+# 'data.frame':   630 obs. of  2 variables:
 #  $ sample            : chr  "TCGA-3C-AAAU-01" "TCGA-3C-AALI-01" "TCGA-3C-AALJ-01" "TCGA-3C-AALK-01" ...
 #  $ tumor_dna_fraction: num  0.85 0.73 0.69 0.62 0.64 0.53 0.89 0.47 0.56 0.65 ...
 
 rownames(fracTum)<-fracTum$sample
-fracTum<-fracTum[key$id2,]
-all(rownames(fracTum)==key$id2)
+
+identical(rownames(fracTum),sub(".$","",colnames(betaOrig)))
 #[1] TRUE
 
-rownames(fracTum)<-key$id
-
-identical(rownames(fracTum),colnames(betaOrig))
-#[1] TRUE
-
-tmp<-fracTum$tumor_dna_fraction
-names(tmp)<-rownames(fracTum)
-fracTum<-tmp
+rownames(fracTum)<-colnames(betaOrig)
 
 HOME<-"~/hdd1/adjustBetas2"
 HOME<-"I:/data/adjustBetas2"
-
-rm(key)
 
 ################################################################################
 ##load data
@@ -419,8 +392,14 @@ rm(meth.cal)
 ##filter X and get top5k
 betaData<-betaOrig
 
-all.equal(names(fracTum),colnames(betaData))
+tmp<-fracTum$tumor_dna_fraction
+names(tmp)<-rownames(fracTum)
+
+all.equal(names(tmp),colnames(betaData))
 #[1] TRUE
+
+fracTum<-tmp
+rm(tmp)
 
 all.equal(rownames(annoObj),rownames(betaData))
 #[1] TRUE
@@ -457,10 +436,10 @@ length(intersect(varF,rownames(beta_norm)))
 testDat2<-betaData[varF,]
 
 str(testDat2)
- # num [1:5000, 1:632] 0.341 0.057 0.012 0.022 0 0.004 0.021 0.892 0.022 0.163 ...
+ # num [1:5000, 1:630] 0.341 0.057 0.012 0.022 0 0.004 0.021 0.892 0.022 0.163 ...
  # - attr(*, "dimnames")=List of 2
  #  ..$ : chr [1:5000] "cg09248054" "cg25340711" "cg06443533" "cg16601494" ...
- #  ..$ : chr [1:632] "TCGA-3C-AAAU-01A" "TCGA-3C-AALI-01A" "TCGA-3C-AALJ-01A" "TCGA-3C-AALK-01A" ...
+ #  ..$ : chr [1:630] "TCGA-3C-AAAU-01A" "TCGA-3C-AALI-01A" "TCGA-3C-AALJ-01A" "TCGA-3C-AALK-01A" ...
 
 ################################################################################
 ###correct betas using multicore
@@ -489,14 +468,13 @@ res<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed
 res2<-parRapply(cl = cl, betaRun, adjustBeta,purity=fracTum,snames=betaNames,seed=TRUE)
 
 table(unlist(lapply(res,function(x) x$n.groups)))
-   # 1    2    3 
-   # 1   39 4960 
+  #  2    3 
+  # 20 4980 
 
 table(unlist(lapply(res,function(x) x$n.groups)),unlist(lapply(res2,function(x) x$n.groups)))
-  #      1    2    3
-  # 1    1    0    0
-  # 2    0   39    0
-  # 3    0    0 4960
+  #      2    3
+  # 2   20    0
+  # 3    0 4980
 
 rm(betaRun,betaNames)
 
@@ -508,6 +486,56 @@ table( unlist(lapply(1:length(res),function(x) { all( unlist(res[[x]],use.names=
 # 5000 
 
 save(res,file=paste0(HOME,"/results_object_adjustedBetas.RData"))
+
+################################################################################
+### Also do infiniumPurify
+
+##InfiniumPurify functions - Adapted from https://github.com/Xiaoqizheng/InfiniumPurify
+myasin <- function(x) asin(2*x-1)
+
+InfiniumPurify<-function (tumor.data, normal.data, purity) 
+{
+    if (missing(tumor.data) | missing(normal.data) | missing(purity)) {
+        stop("'tumor.data', 'normal.data' and 'purity' are required.")
+    }
+    probes = intersect(rownames(tumor.data), rownames(normal.data))
+    tumor.sample = intersect(colnames(tumor.data), names(purity))
+    normal.sample = colnames(normal.data)
+    purity = purity[tumor.sample]
+    if (length(normal.sample) < 20 | length(tumor.sample) < 20) {
+        stop("tumor and normal samples should be more than 20!")
+    }
+    .get_corrBeta <- function(input) {
+        x = as.numeric(input[tumor.sample])
+        y = as.numeric(input[normal.sample])
+        type = c(rep("Tumor", length(x)), rep("Normal", length(y)))
+        data = data.frame(beta = c(x, y), type = type)
+        Y = myasin(data$beta)
+        X = c(1 - purity, rep(0, length(y)))
+        fit = lm(Y ~ X)
+        tmp = resid(fit) + coef(fit)[1]
+        beta.pred = (sin(tmp) + 1)/2
+        beta.pred
+    }
+    all.data = cbind(tumor.data[probes, tumor.sample], normal.data[probes, 
+        ])
+    probes.rmna = probes[rowSums(is.na(all.data)) == 0]
+    all.data.corr = t(apply(all.data[probes.rmna, ], 1, .get_corrBeta))
+    tumor.data.corr = all.data.corr[, 1:length(tumor.sample)]
+    colnames(tumor.data.corr) = tumor.sample
+    tumor.data.corr
+}
+
+temp4<-beta_norm[rownames(temp1),]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+
+beta.infPur<-InfiniumPurify(tumor.data=testDat2,normal.data=temp4,purity=fracTum)
+
+str(beta.infPur)
+ # num [1:5000, 1:630] 0.35269 0.03614 0.01306 0.01478 0.00128 ...
+ # - attr(*, "dimnames")=List of 2
+ #  ..$ : chr [1:5000] "cg09248054" "cg25340711" "cg06443533" "cg16601494" ...
+ #  ..$ : chr [1:630] "TCGA-3C-AAAU-01A" "TCGA-3C-AALI-01A" "TCGA-3C-AALJ-01A" "TCGA-3C-AALK-01A" ...
 
 ################################################################################
 ###gather adjusted data and calculate new data from it..
@@ -525,15 +553,13 @@ table(apply(temp5,1,function(x) sum(is.na(x))))
 #   0
 #5000
 
-temp4<-temp4[!apply(temp4,1,function(x) any(is.na(x))),]
-
 quantile(testDat2)
 #    0%   25%   50%   75%  100% 
-# 0.000 0.152 0.468 0.741 1.000 
+# 0.000 0.155 0.470 0.743 1.000 
 
 quantile(temp4)
 #    0%   25%   50%   75%  100% 
-# 0.000 0.053 0.526 0.922 1.000 
+# 0.000 0.053 0.526 0.924 1.000 
 
 ##Plot histogram of betas before and after correction
 pdf(paste0(HOME,"/top5k_betaDistribution_tumors_beforeAfterCorrection.pdf"),width=8,height=8,useDingbats=F)
@@ -544,9 +570,10 @@ plot(1,xlim=range(round(density(temp4)$x,1)),ylim=range(round(density(temp4)$y,1
 )
 lines(density(temp4),col=2,lwd=2)
 lines(density(testDat2),col=1,lwd=2)
+lines(density(beta.infPur),col=3,lwd=2)
 axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
 axis(2,lwd=2,las=1)
-legend("topright",legend=c("unadjusted beta","adjusted beta"),col=c(1,2),lwd=2,bty="n")
+legend("topright",legend=c("unadjusted beta","adjusted beta","infiniumPurify"),col=c(1,2,3),lwd=2,bty="n")
 dev.off()
 
 ##Plot histogram of betas before and after correction
@@ -575,6 +602,7 @@ temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
 temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
 temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
 temp4<-beta_norm[rownames(temp1),]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
 
 table(apply(temp1,1,function(x) sum(is.na(x))))
 #   0
@@ -583,6 +611,9 @@ table(apply(temp2,1,function(x) sum(is.na(x))))
 #   0
 #5000
 table(apply(temp3,1,function(x) sum(is.na(x))))
+#   0
+#5000
+table(apply(temp4,1,function(x) sum(is.na(x))))
 #   0
 #5000
 
@@ -610,50 +641,51 @@ sample_anno<-data.frame(unadj5000=as.character(c1),
 rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    ER = c("NA"="#FF7F00",
-      "Negative"="#E41A1C",
-      "Positive"="#4DAF4A"
-      ),
-    PR = c("NA"="#FF7F00",
-      "Negative"="#E41A1C",
-      "Positive"="#4DAF4A"
-      ),
-    HER2 = c("NA"="#FF7F00",
-      "Negative"="#E41A1C",
-      "Positive"="#4DAF4A"
-      ),
-    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
-  )
-
 # my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
 #     adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-#     ER = c("[Not Available]"="#FFFF33",
-#       "[Not Evaluated]"="#FF7F00",
-#       "Equivocal"="#377EB8",
-#       "Indeterminate"="#984EA3",
+#     ER = c("NA"="#FF7F00",
 #       "Negative"="#E41A1C",
-#       "Positive"="#4DAF4A",
-#       "NA"="white"),
-#     PR = c("[Not Available]"="#FFFF33",
-#       "[Not Evaluated]"="#FF7F00",
-#       "Equivocal"="#377EB8",
-#       "Indeterminate"="#984EA3",
+#       "Positive"="#4DAF4A"
+#       ),
+#     PR = c("NA"="#FF7F00",
 #       "Negative"="#E41A1C",
-#       "Positive"="#4DAF4A",
-#       "NA"="white"),
-#     HER2 = c("[Not Available]"="#FFFF33",
-#       "[Not Evaluated]"="#FF7F00",
-#       "Equivocal"="#377EB8",
-#       "Indeterminate"="#984EA3",
+#       "Positive"="#4DAF4A"
+#       ),
+#     HER2 = c("NA"="#FF7F00",
 #       "Negative"="#E41A1C",
-#       "Positive"="#4DAF4A",
-#       "NA"="white"),
+#       "Positive"="#4DAF4A"
+#       ),
 #     TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-#     PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),stringsAsFactors=FALSE
+#     PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
 #   )
+
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    ER = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A"
+      ),
+    PR = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A"
+      ),
+    HER2 = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
+      "Negative"="#E41A1C",
+      "Positive"="#4DAF4A",
+      "NA"="white"
+      ),
+    TNBC = c("1"="black","0"="lightgrey"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),stringsAsFactors=FALSE
+  )
 
 tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
@@ -679,6 +711,14 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_infiniumPurifyBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(beta.infPur,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, \"inferred normal\", unadj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
 sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
   "adj5000"=rep("NA",ncol(temp4)),
   "ER"=rep("NA",ncol(temp4)),
@@ -690,6 +730,14 @@ sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
 rownames(sample_anno)<-colnames(temp4)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
+my_colour<-list("unadj5000"=c("NA"="white"),
+  "adj5000"=c("NA"="white"),
+  "ER"=c("NA"="white"),
+  "PR"=c("NA"="white"),
+  "HER2"=c("NA"="white"),
+  "TNBC"=c("NA"="white"),
+  "PAM50"=c("NA"="white"))
+
 tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_unadjClust_normalBeta.tiff"),width=9*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp4,cluster_rows = r1, 
   ,show_rownames=F,show_colnames=F
@@ -700,13 +748,14 @@ pheatmap(temp4,cluster_rows = r1,
 dev.off()
 
 ################################################################################
-###plot top5k clusters - unadjuster order
+###plot top5k clusters - adjuster order
 
 ##check stats
 temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
 temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
 temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
 temp4<-beta_norm[rownames(temp1),]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
 
 table(apply(temp1,1,function(x) sum(is.na(x))))
 #   0
@@ -742,22 +791,32 @@ sample_anno<-data.frame(adj5000=as.character(c1),
 rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    ER = c("NA"="#FF7F00",
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    ER = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    PR = c("NA"="#FF7F00",
+    PR = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    HER2 = c("NA"="#FF7F00",
+    HER2 = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A"
+      "Positive"="#4DAF4A",
+      "NA"="white"
       ),
-    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
+    TNBC = c("1"="black","0"="lightgrey"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),stringsAsFactors=FALSE
   )
 
 tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
@@ -784,6 +843,14 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
 )
 dev.off()
 
+tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+pheatmap(beta.infPur,cluster_rows = r1, cluster_cols = c3
+  ,show_rownames=F,show_colnames=F
+  ,main="top 5000 by sd, \"infiniumPurify\", adj clust , pearC/euclR",cutree_cols=5
+  ,annotation_col=sample_anno,annotation_colors=my_colour
+)
+dev.off()
+
 sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
   "adj5000"=rep("NA",ncol(temp4)),
   "ER"=rep("NA",ncol(temp4)),
@@ -794,6 +861,14 @@ sample_anno<-data.frame("unadj5000"=rep("NA",ncol(temp4)),
 )
 rownames(sample_anno)<-colnames(temp4)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
+
+my_colour<-list("unadj5000"=c("NA"="white"),
+  "adj5000"=c("NA"="white"),
+  "ER"=c("NA"="white"),
+  "PR"=c("NA"="white"),
+  "HER2"=c("NA"="white"),
+  "TNBC"=c("NA"="white"),
+  "PAM50"=c("NA"="white"))
 
 tiff(paste0(HOME,"/top5k_heatmap_pear_eucl_adjClust_normalBeta.tiff"),width=9*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp4,cluster_rows = r1, 
@@ -832,9 +907,9 @@ dev.off()
   ##extract -logP(fisher) hclust 2-split vs PAM50 basal-luminal
   ##plot distribution of p-values for corrected vs uncorrected comparison
 
-all(rownames(sampleAnno)==sub("-...$","",colnames(betaData)))
+all(rownames(sampleAnno)==colnames(betaData))
 #[1] TRUE
-all(rownames(sampleAnno)==sub("-...$","",names(fracTum)))
+all(rownames(sampleAnno)==names(fracTum))
 #[1] TRUE
 
 ##number of lists
@@ -877,42 +952,6 @@ getSpec<-function(x,ref) {
   a1<-sum(x!=2 & ref!=2 ) / sum( ref!=2 )
   a1<-c( a1 , sum(abs(3-x)!=2 & ref!=2 ) / sum( ref!=2 ) )
   a1[which.max(a1)]
-}
-
-##InfiniumPurify functions - Adapted from https://github.com/Xiaoqizheng/InfiniumPurify
-myasin <- function(x) asin(2*x-1)
-
-InfiniumPurify<-function (tumor.data, normal.data, purity) 
-{
-    if (missing(tumor.data) | missing(normal.data) | missing(purity)) {
-        stop("'tumor.data', 'normal.data' and 'purity' are required.")
-    }
-    probes = intersect(rownames(tumor.data), rownames(normal.data))
-    tumor.sample = intersect(colnames(tumor.data), names(purity))
-    normal.sample = colnames(normal.data)
-    purity = purity[tumor.sample]
-    if (length(normal.sample) < 20 | length(tumor.sample) < 20) {
-        stop("tumor and normal samples should be more than 20!")
-    }
-    .get_corrBeta <- function(input) {
-        x = as.numeric(input[tumor.sample])
-        y = as.numeric(input[normal.sample])
-        type = c(rep("Tumor", length(x)), rep("Normal", length(y)))
-        data = data.frame(beta = c(x, y), type = type)
-        Y = myasin(data$beta)
-        X = c(1 - purity, rep(0, length(y)))
-        fit = lm(Y ~ X)
-        tmp = resid(fit) + coef(fit)[1]
-        beta.pred = (sin(tmp) + 1)/2
-        beta.pred
-    }
-    all.data = cbind(tumor.data[probes, tumor.sample], normal.data[probes, 
-        ])
-    probes.rmna = probes[rowSums(is.na(all.data)) == 0]
-    all.data.corr = t(apply(all.data[probes.rmna, ], 1, .get_corrBeta))
-    tumor.data.corr = all.data.corr[, 1:length(tumor.sample)]
-    colnames(tumor.data.corr) = tumor.sample
-    tumor.data.corr
 }
 
 ###RUN
@@ -1143,75 +1182,6 @@ text(10,.05,labels="Specificity",pos=3)
 
 dev.off()
 
-##deltas - adj.
-t.test(resMat2[,4]-resMat2[,1])
-#         One Sample t-test
-# data:  resMat2[, 4] - resMat2[, 1]
-# t = 12.074, df = 99, p-value < 2.2e-16
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  0.1713949 0.2388067
-# sample estimates:
-# mean of x 
-# 0.2051008 
-
-t.test(resMat2[,5]-resMat2[,2])
-#         One Sample t-test
-# data:  resMat2[, 5] - resMat2[, 2]
-# t = -3.8434, df = 99, p-value = 0.0002144
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  -0.03510622 -0.01120009
-# sample estimates:
-#   mean of x 
-# -0.02315315 
-
-t.test(resMat2[,6]-resMat2[,3])
-#         One Sample t-test
-# data:  resMat2[, 6] - resMat2[, 3]
-# t = 12.779, df = 99, p-value < 2.2e-16
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  0.1806363 0.2470416
-# sample estimates:
-# mean of x 
-#  0.213839 
-
-
-##deltas - beta>.3
-t.test(resMat2[,7]-resMat2[,1])
-#         One Sample t-test
-# data:  resMat2[, 7] - resMat2[, 1]
-# t = -5.708, df = 99, p-value = 1.196e-07
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  -0.15162318 -0.07340008
-# sample estimates:
-#  mean of x 
-# -0.1125116 
-
-t.test(resMat2[,8]-resMat2[,2])
-#         One Sample t-test
-# data:  resMat2[, 8] - resMat2[, 2]
-# t = -3.4575, df = 99, p-value = 0.0008051
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  -0.08025412 -0.02172786
-# sample estimates:
-#   mean of x 
-# -0.05099099 
-
-t.test(resMat2[,9]-resMat2[,3])
-#         One Sample t-test
-# data:  resMat2[, 9] - resMat2[, 3]
-# t = -5.0373, df = 99, p-value = 2.126e-06
-# alternative hypothesis: true mean is not equal to 0
-# 95 percent confidence interval:
-#  -0.13936428 -0.06059827
-# sample estimates:
-#   mean of x 
-# -0.09998127 
-
 rm(resMat2)
 
 ################################################################################  
@@ -1279,7 +1249,7 @@ my_colour = list(unadj500=c("1"="#E41A1C","2"="#377EB8"),
     adj500=c("1"="#E41A1C","2"="#377EB8"),
     #adj5000=c("a"="red","b"="pink","c"="darkgreen","d"="orange","e"="grey"),
     #umap = c("1" = "#5977ff", "2" = "#f74747"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white")
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white")
     #TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
@@ -1359,7 +1329,7 @@ out<-image_append(c(out,a3),stack=T)
 image_write(out, path = paste0(HOME,"/fig2_random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
 
 rm(a1,a2,a3,a9,a11,out)
-rm(c1,c2,c3,c4,c5,r1,b,b1,b2,b3,cl)
+rm(c1,c2,c3,c4,c5,r1,b,b1,b2,cl)
 
 gc()
 
@@ -1373,10 +1343,10 @@ gc()
 temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
 temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
 temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
-set.seed(12345)
-temp5<-t( apply(beta_norm[rownames(temp1),],1,function(x) { x[is.na(x)]<-median(x[!is.na(x)]) ; return(x) } ) )
-colnames(temp5)<-paste0("s",1:96)
-temp5<-InfiniumPurify(tumor.data=betaData[rownames(temp1),],normal.data=temp5,purity=fracTum)
+temp4<-beta_norm[rownames(temp1),]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+temp5<-InfiniumPurify(tumor.data=temp3,normal.data=temp4,purity=fracTum)
+
 
 table(apply(temp1,1,function(x) sum(is.na(x))))
 #   0
@@ -1413,22 +1383,33 @@ sample_anno<-data.frame(adj5000=as.character(c1),
 rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    ER = c("NA"="#FF7F00",
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    infPur5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    ER = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    PR = c("NA"="#FF7F00",
+    PR = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    HER2 = c("NA"="#FF7F00",
+    HER2 = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A"
+      "Positive"="#4DAF4A",
+      "NA"="white"
       ),
-    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
+    TNBC = c("1"="black","0"="lightgrey"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),stringsAsFactors=FALSE
   )
 
 tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
@@ -1526,9 +1507,6 @@ rm(c1,c2,c3,c4,r1,temp1,temp2,temp3,temp4)
 
 gc()
 
-
-
-
 ################################################################################ 
 ################################################################################
 ##Create Fig 3 panels and image - Real life correction example
@@ -1540,6 +1518,8 @@ temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
 temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
 temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
 temp4<-beta_norm[rownames(temp1),]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+#temp5<-InfiniumPurify(tumor.data=temp3,normal.data=temp4,purity=fracTum)
 
 table(apply(temp1,1,function(x) sum(is.na(x))))
 #   0
@@ -1578,22 +1558,33 @@ sample_anno<-data.frame(adj5000=as.character(c1),
 rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00","NA"="white"),
-    ER = c("NA"="#FF7F00",
+
+my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    adj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
+    ER = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    PR = c("NA"="#FF7F00",
+    PR = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
       "Positive"="#4DAF4A"
       ),
-    HER2 = c("NA"="#FF7F00",
+    HER2 = c("[Not Available]"="#FFFF33",
+      "[Not Evaluated]"="#FF7F00",
+      "Equivocal"="#377EB8",
+      "Indeterminate"="#984EA3",
       "Negative"="#E41A1C",
-      "Positive"="#4DAF4A"
+      "Positive"="#4DAF4A",
+      "NA"="white"
       ),
-    TNBC = c("1"="black","0"="lightgrey","NA"="white"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),stringsAsFactors=FALSE
+    TNBC = c("1"="black","0"="lightgrey"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),stringsAsFactors=FALSE
   )
 
 tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
@@ -1723,30 +1714,33 @@ cor( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE) )
 length(ff)
 #[1] 5000
 
+temp4<-beta_norm_adj[ff,]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+
 pdf(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE),pch=16
+plot( rowMeans(temp2[ff,]),rowMeans(temp4[ff,],na.rm=TRUE),pch=16
   ,main=""
   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
  )
-points(rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,]),pch=16)
+points(rowMeans(temp2[ff,]),rowMeans(temp4[ff,]),pch=16)
 text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(beta_norm_adj[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+abline(lm(rowMeans(temp4[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
 axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
 axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
 dev.off()
 
 tiff(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot( rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,],na.rm=TRUE),pch=16
+plot( rowMeans(temp2[ff,]),rowMeans(temp4[ff,],na.rm=TRUE),pch=16
   ,main=""
   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
  )
-points(rowMeans(temp2[ff,]),rowMeans(beta_norm_adj[ff,]),pch=16)
+points(rowMeans(temp2[ff,]),rowMeans(temp4[ff,]),pch=16)
 text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(beta_norm_adj[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+abline(lm(rowMeans(temp4[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
 axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
 axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
 dev.off()
@@ -1820,7 +1814,7 @@ image_write(out, path = paste0(HOME,"/fig3_top5kBySd_clusterVpurity_combined.tif
 tiff(paste0(HOME,"/fig3_top5kBySd_barplotPam50_adj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 tt<-table(sampleAnno$pam50.full,factor(c1))
-barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),
+barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),
   ,main="",legend.text=F
   ,xlab="adjusted beta - 5 group",ylab="Fraction of cluster"
   ,las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
@@ -1832,7 +1826,7 @@ dev.off()
 tiff(paste0(HOME,"/fig3_top5kBySd_barplotPam50_unadj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
 tt<-table(sampleAnno$pam50.full,factor(c2))
-barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","NA"="white"),
+barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),
   ,main="",legend.text=T
   ,xlab="unadjusted beta - 5 group",ylab="Fraction of cluster"
   ,las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
@@ -1997,85 +1991,17 @@ all.equal(rownames(annoObj2),rownames(betaData))
 all.equal(rownames(annoObj2),rownames(betaData2))
 #[1] TRUE
 
-str(annoObj2)
-# 'data.frame':   418616 obs. of  65 variables:
-#  $ illuminaID                   : chr  "cg21870274" "cg08258224" "cg16619049" "cg18147296" ...
-#  $ chr                          : chr  "chr1" "chr1" "chr1" "chr1" ...
-#  $ start                        : num  69591 864703 870161 877159 898803 ...
-#  $ end                          : num  69592 864704 870162 877160 898804 ...
-#  $ hasUCSCknownGeneOverlap      : num  1 0 1 1 0 0 0 0 0 0 ...
-#  $ nameUCSCknownGeneOverlap     : chr  "OR4F5" "" "FAM41C" "FAM41C" ...
-#  $ numberUCSCknownGeneOverlap   : num  1 0 1 1 0 0 0 0 0 0 ...
-#  $ hasUCSCknownGenePromOverlap  : num  0 0 0 1 0 0 0 0 0 0 ...
-#  $ hasUCSCknownGeneUp5kbOverlap : num  0 0 0 0 0 0 0 0 0 0 ...
-#  $ hasUCSCknownGeneDn5kbOverlap : num  1 0 0 0 0 0 0 0 0 0 ...
-#  $ hasUCSCknownTxPromOverlap    : num  0 0 1 1 0 0 0 0 0 0 ...
-#  $ hasUCSCknownTxUp5kbOverlap   : num  0 0 1 0 0 0 0 1 1 1 ...
-#  $ hasUCSCknownTxDn5kbOverlap   : num  1 1 0 1 0 0 0 0 0 0 ...
-#  $ ucscKnownGeneIsDistal        : num  0 1 1 0 1 1 1 1 1 1 ...
-#  $ ucscKnownGeneIsGenic         : num  1 0 1 1 0 0 0 0 0 0 ...
-#  $ ucscKnownGeneIsDistalNonGenic: num  0 1 0 0 1 1 1 1 1 1 ...
-#  $ ucscKnownGeneIsGeneBody      : num  1 0 1 0 0 0 0 0 0 0 ...
-#  $ hasGeneOverlap               : num  1 0 1 0 0 0 0 0 0 0 ...
-#  $ nameGeneOverlap              : chr  "ENSG00000186092|OR4F5" "" "ENSG00000230368|FAM41C" "" ...
-#  $ numberGeneOverlap            : num  1 0 1 0 0 0 0 0 0 0 ...
-#  $ hasUp5kbOverlap              : num  0 0 1 0 0 0 0 1 1 1 ...
-#  $ nameUp5kbOverlap             : chr  "" "" "ENSG00000234711|TUBB8P11" "" ...
-#  $ numberUp5kbOverlap           : num  0 0 1 0 0 0 0 1 1 1 ...
-#  $ hasDn5kbOverlap              : num  1 0 0 1 0 0 0 0 0 0 ...
-#  $ nameDn5kbOverlap             : chr  "ENSG00000186092|OR4F5" "" "" "ENSG00000234711|TUBB8P11" ...
-#  $ numberDn5kbOverlap           : num  1 0 0 1 0 0 0 0 0 0 ...
-#  $ hasPromOverlap               : num  0 0 0 1 0 0 0 0 0 0 ...
-#  $ namePromOverlap              : chr  "" "" "" "ENSG00000230368|FAM41C" ...
-#  $ numberPromOverlap            : num  0 0 0 1 0 0 0 0 0 0 ...
-#  $ isPromMostVariable           : num  0 0 0 1 0 0 0 0 0 0 ...
-#  $ namePromMostVariable         : chr  "" "" "" "ENSG00000230368|FAM41C" ...
-#  $ numberPromMostVariable       : num  0 0 0 1 0 0 0 0 0 0 ...
-#  $ hasAtacOverlap               : num  0 0 1 0 0 0 0 0 0 0 ...
-#  $ nameAtacOverlap              : chr  "" "" "chr1:869670-870169" "" ...
-#  $ numberAtacOverlap            : num  0 0 1 0 0 0 0 0 0 0 ...
-#  $ isAtacMostVariable           : num  0 0 1 0 0 0 0 0 0 0 ...
-#  $ isDistal                     : num  0 1 0 0 1 1 1 0 0 0 ...
-#  $ isGenic                      : num  1 0 1 0 0 0 0 0 0 0 ...
-#  $ isDistalNonGenic             : num  0 1 0 0 1 1 1 0 0 0 ...
-#  $ isGeneBody                   : num  1 0 1 0 0 0 0 0 0 0 ...
-#  $ weberOE                      : num  0.248 0.249 0.637 0.163 0.565 ...
-#  $ weberClass                   : chr  "LCP" "LCP" "HCP" "LCP" ...
-#  $ saxonovOE                    : num  0.238 0.268 0.473 0.202 0.441 ...
-#  $ saxonovClass                 : chr  "LCG" "LCG" "HCG" "LCG" ...
-#  $ cgCount300Bp                 : int  6 2 27 4 9 13 16 8 18 16 ...
-#  $ cgPer100Bp                   : num  2 0.667 9 1.333 3 ...
-#  $ isCgi                        : num  0 0 1 0 0 0 0 0 0 0 ...
-#  $ isShore                      : num  0 1 0 0 0 0 0 0 1 1 ...
-#  $ isOcean                      : num  1 0 0 1 1 1 1 1 0 0 ...
-#  $ cgiClass                     : chr  "ocean" "shore" "cgi" "ocean" ...
-#  $ featureClass                 : chr  "proximal dn" "distal" "proximal up" "promoter" ...
-#  $ featureClassUcsc             : chr  "proximal dn" "distal" "distal body" "promoter" ...
-#  $ illuminaCpG_CpH_Probe        : chr  "cg" "cg" "cg" "cg" ...
-#  $ encodeCre                    : num  0 0 1 0 0 0 0 0 0 0 ...
-#  $ encodeCreCategory            : chr  "" "" "PLS" "" ...
-#  $ encodeCreCtcf                : num  0 0 1 0 0 0 0 0 0 0 ...
-#  $ encodeChipMeanNcellPeaks     : num  0 0 4.73 0 1 ...
-#  $ encodeChipUniqueTfPeaks      : num  0 0 30 0 9 7 7 1 1 0 ...
-#  $ hasAnyRepeatOverlap          : num  0 0 0 0 0 0 0 0 1 1 ...
-#  $ hasMultiRepeatOverlap        : num  0 0 0 0 0 0 0 0 0 0 ...
-#  $ hasOneRepeatOverlap          : num  0 0 0 0 0 0 0 0 1 1 ...
-#  $ hasRepeatOverlap             : num  0 0 0 0 0 0 0 0 1 1 ...
-#  $ repeatClass                  : chr  "" "" "" "" ...
-#  $ repeatFamily                 : chr  "" "" "" "" ...
-#  $ repeatName                   : chr  "" "" "" "" ...
-
 ##panel 1 - X-beta in normals
 tiff(paste0(HOME,"/fig4_xChromAdjStats_panel1.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot(density((betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$saxonovClass == "HCG",]))
+plot(density(as.vector(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1 & annoObj2$saxonovClass == "HCG",]))
   ,main="",type="n"
   ,xlab="X chromosome HCG promoter methylation (N=434 CpGs)",ylab="Density"
   ,las=1,axes=F,xlim=c(0,1),ylim=c(0,2.5)
   )
 abline(v=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
-lines(density((betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$saxonovClass == "HCG",])),lwd=3,col="#E41A1C",lty=1)
-lines(density((beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$saxonovClass == "HCG",]),na.rm=T),lwd=3,col="#377EB8",lty=1)
+lines(density((betaNorm2[ annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1 &  annoObj2$saxonovClass == "HCG",])),lwd=3,col="#E41A1C",lty=1)
+lines(density((beta_norm2[ annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1 & annoObj2$saxonovClass == "HCG",]),na.rm=T),lwd=3,col="#377EB8",lty=1)
 axis(1,lwd=2,las=1,at=seq(0,1,by=.25),font=2)
 axis(2,lwd=2,las=1,font=2)
 legend("topright",legend=c("inferred normal","GSE67919 normal"),bty="n",col=c("#E41A1C","#377EB8"),lwd=3)
@@ -2085,7 +2011,7 @@ text(.5,.075,labels="0.25 < Xi < 0.75")
 text(.15,.075,labels="Hypo < 0.25")
 
 
-ai<-table(apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+ai<-table(apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1 & annoObj2$weberClass == "HCP",],1,function(x) {
   if( median(x)<.25) { 
     return("hypo") 
   }
@@ -2097,7 +2023,7 @@ ai<-table(apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable=
 }))
 text(.12,2.2,paste("inferred normal",paste(paste(names(ai),round(ai/sum(ai),2),sep=": ")," (N=",ai,")",sep="",collapse="\n"),sep="\n"))
 
-bi<-table(apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+bi<-table(apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1 & annoObj2$weberClass == "HCP",],1,function(x) {
   if( median(x,na.rm=T)<.25) { 
     return("hypo") 
   }
@@ -2109,7 +2035,7 @@ bi<-table(apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable
 }))
 text(.12,1.75,paste("GSE67919 normal",paste(paste(names(bi),round(bi/sum(bi),2),sep=": ")," (N=",bi,")",sep="",collapse="\n"),sep="\n"))
 
-ai<-apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+ai<-apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1 &  annoObj2$weberClass == "HCP",],1,function(x) {
   if( median(x)<.25) { 
     return("hypo") 
   }
@@ -2119,7 +2045,7 @@ ai<-apply(betaNorm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & a
     return("Xi")
   }
 })
-bi<-apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP",],1,function(x) {
+bi<-apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1 &  annoObj2$weberClass == "HCP",],1,function(x) {
   if( median(x,na.rm=T)<.25) { 
     return("hypo") 
   }
@@ -2129,8 +2055,8 @@ bi<-apply(beta_norm2[ annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & 
     return("Xi")
   }
 })
-names(ai)<-sub("_.+","",annoObj2$namePromMostVariable[annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP"])
-names(bi)<-sub("_.+","",annoObj2$namePromMostVariable[annoObj2$chr == "chrX" & annoObj2$isPromMostVariable==1 & annoObj2$weberClass == "HCP"])
+names(ai)<-sub("_.+","",annoObj2$namePromOverlap[annoObj2$chr == "chrX"  & annoObj2$hasPromOverlap==1 & annoObj2$weberClass == "HCP"])
+names(bi)<-sub("_.+","",annoObj2$namePromOverlap[annoObj2$chr == "chrX" & annoObj2$hasPromOverlap==1  & annoObj2$weberClass == "HCP"])
 text(.12,1.4,paste0("concordance=",round(100*sum(diag(table(ai,bi))/length(ai)),1),"%"))
 
 ##compare with published list of Xi-escape genes (N=75)
@@ -2187,6 +2113,8 @@ temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
 temp2<-do.call("rbind",lapply(res,function(x) x$y.norm))
 temp3<-do.call("rbind",lapply(res,function(x) x$y.orig))
 temp4<-beta_norm[rownames(temp1),]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+#temp5<-InfiniumPurify(tumor.data=temp3,normal.data=temp4,purity=fracTum)
 
 table(apply(temp1,1,function(x) sum(is.na(x))))
 #   0
@@ -2321,7 +2249,7 @@ my_colour = list(#unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#98
     #   "Positive"="#4DAF4A"
     #   ),
     TNBC = c("1"="black","0"="lightgrey"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#377EB8","NA"="white"),
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),
     feature=c("distal"=brewer.pal(9,"Blues")[c(5)],"promoter"=brewer.pal(9,"Reds")[c(5)],"proximal"="white"),
     island=c("ocean"=brewer.pal(9,"Blues")[c(5)],"shore"="white","cgi"=brewer.pal(9,"Reds")[c(5)]),
     Atac=c("0"="white","1"=brewer.pal(9,"Greens")[c(5)]),
@@ -2391,14 +2319,14 @@ sel<-annoObj[rownames(temp1),"cgiClass"]=="cgi" & tfMat[rownames(temp1),"EZH2"]=
 table(sel)
 # sel
 # FALSE  TRUE 
-#  4109   891 
+#  4119   881 
 
 ##
 tiff(paste0(HOME,"/fig5_panel_cgiPcG.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(mar=c(6.1, 4.1, 3.1 ,2.1),fig=c(0,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2)
 plot(1,cex.main=1.75
   ,type="n",xlab=""
-  ,main="CGI with ENCODE EZH2+SUZ12 (N=891)",ylab="Beta"
+  ,main="CGI with ENCODE EZH2+SUZ12 (N=881)",ylab="Beta"
   ,las=1,axes=F,xlim=c(0,35),ylim=c(0,1)
   )
 abline(h=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
@@ -2576,14 +2504,14 @@ sel<-tfMat[rownames(temp1),"FOXA1"]==1 & tfMat[rownames(temp1),"GATA3"]==1 & ann
 table(sel)
 # sel
 # FALSE  TRUE 
-#  4109   891 
+#  4948    52 
 
 ##
 tiff(paste0(HOME,"/fig5_panel_foxaGata.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(mar=c(6.1, 4.1, 3.1 ,2.1),fig=c(0,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2)
 plot(1,cex.main=1.75
   ,type="n",xlab=""
-  ,main="TCGA ATAC with ENCODE FOXA1+GATA3 (N=53)",ylab="Beta"
+  ,main="TCGA ATAC with ENCODE FOXA1+GATA3 (N=52)",ylab="Beta"
   ,las=1,axes=F,xlim=c(0,35),ylim=c(0,1)
   )
 abline(h=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
@@ -2761,14 +2689,14 @@ sel<-sub(" .+","",annoObj[rownames(temp1),"featureClass"])=="distal" & rowSums(t
 table(sel)
 # sel
 # FALSE  TRUE 
-#  4527   473 
+#  4524   476 
 
 ##
 tiff(paste0(HOME,"/fig5_panel_distalNoTf.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(mar=c(6.1, 4.1, 3.1 ,2.1),fig=c(0,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2)
 plot(1,cex.main=1.75
   ,type="n",xlab=""
-  ,main="Distal without ENCODE TFBS (N=473)",ylab="Beta"
+  ,main="Distal without ENCODE TFBS (N=476)",ylab="Beta"
   ,las=1,axes=F,xlim=c(0,35),ylim=c(0,1)
   )
 abline(h=c(0,.25,.5,.75,1),lty=c(1,2,1,2,1),lwd=3,col="lightgrey")
@@ -2993,7 +2921,6 @@ unlink(tmp)
 ################################################################################
 ##Create CpG O/E based analysis
 
-
 ##O/E by type
 tiff(paste0(HOME,"/fig6_panel_a1.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 par(mar=c(5.1, 5.6, 4.1 ,.6),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
@@ -3073,11 +3000,293 @@ out<-image_scale(out,"4150x")
 
 image_write(out, path = paste0(HOME,"/fig6_panel_a.tiff"), format = "tiff")
 
+################################################################################
+################################################################################
+##Create CpG O/E based analysis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+str(annoObj)
+# 'data.frame':   421368 obs. of  62 variables:
+#  $ illuminaID                   : chr  "cg21870274" "cg08258224" "cg16619049" "cg18147296" ...
+#  $ chr                          : chr  "chr1" "chr1" "chr1" "chr1" ...
+#  $ start                        : num  69591 864703 870161 877159 898803 ...
+#  $ end                          : num  69592 864704 870162 877160 898804 ...
+#  $ hasUCSCknownGeneOverlap      : num  1 0 1 1 0 0 0 0 0 0 ...
+#  $ nameUCSCknownGeneOverlap     : chr  "OR4F5" "" "FAM41C" "FAM41C" ...
+#  $ numberUCSCknownGeneOverlap   : num  1 0 1 1 0 0 0 0 0 0 ...
+#  $ hasUCSCknownGenePromOverlap  : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ hasUCSCknownGeneUp5kbOverlap : num  0 0 0 0 0 0 0 0 0 0 ...
+#  $ hasUCSCknownGeneDn5kbOverlap : num  1 0 0 0 0 0 0 0 0 0 ...
+#  $ hasUCSCknownTxPromOverlap    : num  0 0 1 1 0 0 0 0 0 0 ...
+#  $ hasUCSCknownTxUp5kbOverlap   : num  0 0 1 0 0 0 0 1 1 1 ...
+#  $ hasUCSCknownTxDn5kbOverlap   : num  1 1 0 1 0 0 0 0 0 0 ...
+#  $ ucscKnownGeneIsDistal        : num  0 1 1 0 1 1 1 1 1 1 ...
+#  $ ucscKnownGeneIsGenic         : num  1 0 1 1 0 0 0 0 0 0 ...
+#  $ ucscKnownGeneIsDistalNonGenic: num  0 1 0 0 1 1 1 1 1 1 ...
+#  $ ucscKnownGeneIsGeneBody      : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ hasGeneOverlap               : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ nameGeneOverlap              : chr  "ENSG00000186092|OR4F5" "" "ENSG00000230368|FAM41C" "" ...
+#  $ numberGeneOverlap            : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ hasUp5kbOverlap              : num  0 0 1 0 0 0 0 1 1 1 ...
+#  $ nameUp5kbOverlap             : chr  "" "" "ENSG00000234711|TUBB8P11" "" ...
+#  $ numberUp5kbOverlap           : num  0 0 1 0 0 0 0 1 1 1 ...
+#  $ hasDn5kbOverlap              : num  1 0 0 1 0 0 0 0 0 0 ...
+#  $ nameDn5kbOverlap             : chr  "ENSG00000186092|OR4F5" "" "" "ENSG00000234711|TUBB8P11" ...
+#  $ numberDn5kbOverlap           : num  1 0 0 1 0 0 0 0 0 0 ...
+#  $ hasPromOverlap               : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ namePromOverlap              : chr  "" "" "" "ENSG00000230368|FAM41C" ...
+#  $ numberPromOverlap            : num  0 0 0 1 0 0 0 0 0 0 ...
+#  $ hasAtacOverlap               : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ nameAtacOverlap              : chr  "" "" "chr1:869670-870169" "" ...
+#  $ numberAtacOverlap            : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ isDistal                     : num  0 1 0 0 1 1 1 0 0 0 ...
+#  $ isGenic                      : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ isDistalNonGenic             : num  0 1 0 0 1 1 1 0 0 0 ...
+#  $ isGeneBody                   : num  1 0 1 0 0 0 0 0 0 0 ...
+#  $ weberOE                      : num  0.248 0.249 0.637 0.163 0.565 ...
+#  $ weberClass                   : chr  "LCP" "LCP" "HCP" "LCP" ...
+#  $ saxonovOE                    : num  0.238 0.268 0.473 0.202 0.441 ...
+#  $ saxonovClass                 : chr  "LCG" "LCG" "HCG" "LCG" ...
+#  $ cgCount300Bp                 : int  6 2 27 4 9 13 16 8 18 16 ...
+#  $ cgPer100Bp                   : num  2 0.667 9 1.333 3 ...
+#  $ isCgi                        : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ isShore                      : num  0 1 0 0 0 0 0 0 1 1 ...
+#  $ isOcean                      : num  1 0 0 1 1 1 1 1 0 0 ...
+#  $ cgiClass                     : chr  "ocean" "shore" "cgi" "ocean" ...
+#  $ featureClass                 : chr  "proximal dn" "distal" "proximal up" "promoter" ...
+#  $ featureClassUcsc             : chr  "proximal dn" "distal" "distal body" "promoter" ...
+#  $ illuminaCpG_CpH_Probe        : chr  "cg" "cg" "cg" "cg" ...
+#  $ illuminaDesignType           : chr  "II" "II" "I" "II" ...
+#  $ encodeCre                    : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ encodeCreCategory            : chr  "" "" "PLS" "" ...
+#  $ encodeCreCtcf                : num  0 0 1 0 0 0 0 0 0 0 ...
+#  $ encodeChipMeanNcellPeaks     : num  0 0 4.73 0 1 ...
+#  $ encodeChipUniqueTfPeaks      : num  0 0 30 0 9 7 7 1 1 0 ...
+#  $ hasAnyRepeatOverlap          : num  0 0 0 0 0 0 0 0 1 1 ...
+#  $ hasMultiRepeatOverlap        : num  0 0 0 0 0 0 0 0 0 0 ...
+#  $ hasOneRepeatOverlap          : num  0 0 0 0 0 0 0 0 1 1 ...
+#  $ hasRepeatOverlap             : num  0 0 0 0 0 0 0 0 1 1 ...
+#  $ repeatClass                  : chr  "" "" "" "" ...
+#  $ repeatFamily                 : chr  "" "" "" "" ...
+#  $ repeatName                   : chr  "" "" "" "" ...
+
+
+
+
+
+
+
+
+
+
+
+
 ##Second panel - methylation by subtype
 
 table(sampleAnno$pam50.full)
-# Basal  Her2  LumA  LumB 
-#   111   141   160   233 
+ # Basal   Her2   LumA   LumB Normal 
+ #   106     41    330    132     21 
+
+sel<-sub(" .+","",annoObj[rownames(temp1),"featureClass"])=="distal" & rowSums(tfMat[rownames(temp1),])==0
+
+
+sel<-tfMat[rownames(temp1),"FOXA1"]==1 & tfMat[rownames(temp1),"GATA3"]==1 & annoObj[rownames(temp1),"hasAtacOverlap"]==1
+
+
+sel<-annoObj[rownames(temp1),"cgiClass"]=="cgi" & tfMat[rownames(temp1),"EZH2"]==1 & tfMat[rownames(temp1),"SUZ12"]==1
+
+
+temp5<-beta_norm_adj[rownames(annoObj),]
+temp5<-t(apply(temp5,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+
+
+tiff(paste0(HOME,"/fig6_panel_b1.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+cgBins<-cut(annoObj[,"saxonovOE"],breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
+sel<-annoObj$isDistal==1 & annoObj$hasAtacOverlap==1
+sel<-annoObj[,"cgiClass"]=="cgi" & tfMat[,"EZH2"]==1 & tfMat[,"SUZ12"]==1
+#sel<-sub(" .+","",annoObj[,"featureClass"])=="distal" & rowSums(tfMat)==0
+sel<-rep(TRUE,nrow(annoObj))
+#sel<-annoObj$isShore==1
+#sel<-annoObj$hasPromOverlap==1
+#sel<-annoObj$weberClass=="HCP"
+#sel<-annoObj$isDistalNonGenic==1 & annoObj$hasAtacOverlap==1
+
+#sel<-tfMat[,"FOXA1"]==1 & tfMat[,"GATA3"]==1 & annoObj[,"hasAtacOverlap"]==1
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",main="",sub="",xlab="",ylab="",
+  axes=F,xlim=c(0,100),ylim=c(0,1)
+  )
+##I/II density
+dd<-density(cgBins[sel])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=1)
+##legends
+axis(1,lwd=2,las=1,at=seq(0,100,by=50),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+axis(4,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25,col="grey",col.axis="grey")
+mtext("100 CpG O/E bins",side=1,at=50,line=2.5,font=2,cex=2)
+mtext("Median lumA beta",side=2,line=4,font=2,cex=2)
+mtext("Scaled feature density",side=4,line=4,font=2,cex=2,col="grey")
+legend("topright",legend=c("Basal","Her2","LumA","LumB","GSE67919"),
+  col=c(brewer.pal(9,"Reds")[7],brewer.pal(9,"Blues")[5],brewer.pal(9,"Greens")[5],brewer.pal(9,"Greens")[7],brewer.pal(9,"Oranges")[5],,,)
+  ,bty="n",lty=1,lwd=3,cex=2)
+#adj
+nn<-unlist(lapply(split(as.vector(betaAdj[sel,sampleAnno$pam50.full=="Basal"]),rep(cgBins[sel],sum(sampleAnno$pam50.full=="Basal"))),mean))
+lines(as.integer(names(nn)),nn,col=brewer.pal(9,"Reds")[7],lty=1,lwd=3)
+nn<-unlist(lapply(split(as.vector(betaAdj[sel,sampleAnno$pam50.full=="Her2"]),rep(cgBins[sel],sum(sampleAnno$pam50.full=="Her2"))),mean))
+lines(as.integer(names(nn)),nn,col=brewer.pal(9,"Blues")[5],lty=1,lwd=3)
+#unadj
+nn<-unlist(lapply(split(as.vector(betaAdj[sel,sampleAnno$pam50.full=="LumA"]),rep(cgBins[sel],sum(sampleAnno$pam50.full=="LumA"))),mean))
+lines(as.integer(names(nn)),nn,col=brewer.pal(9,"Greens")[5],lty=1,lwd=3)
+nn<-unlist(lapply(split(as.vector(betaAdj[sel,sampleAnno$pam50.full=="LumB"]),rep(cgBins[sel],sum(sampleAnno$pam50.full=="LumB"))),mean))
+lines(as.integer(names(nn)),nn,col=brewer.pal(9,"Greens")[7],lty=1,lwd=3)
+
+nn<-unlist(lapply(split(as.vector(temp5[sel,]),rep(cgBins[sel],ncol(temp5))),mean))
+lines(as.integer(names(nn)),nn,col=brewer.pal(9,"Oranges")[5],lty=1,lwd=3)
+# nn<-unlist(lapply(split(as.vector(betaNorm[sel,]),rep(cgBins[sel],ncol(betaNorm))),mean))
+# lines(as.integer(names(nn)),nn,col=brewer.pal(9,"Oranges")[5],lty=1,lwd=3)
+
+
+
+
+#sel<-tfMat[,"FOXA1"]==1 & tfMat[,"GATA3"]==1 & annoObj[,"hasAtacOverlap"]==1
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",main="",sub="",xlab="",ylab="",
+  axes=F,xlim=c(0,100),ylim=c(-.25,.25)
+  )
+##I/II density
+dd<-density(cgBins[sel])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=1)
+##legends
+axis(1,lwd=2,las=1,at=seq(0,100,by=50),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+axis(4,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25,col="grey",col.axis="grey")
+mtext("100 CpG O/E bins",side=1,at=50,line=2.5,font=2,cex=2)
+mtext("Median lumA beta",side=2,line=4,font=2,cex=2)
+mtext("Scaled feature density",side=4,line=4,font=2,cex=2,col="grey")
+legend("topright",legend=c("Basal","Her2","LumA","LumB","GSE67919"),
+  col=c(brewer.pal(9,"Reds")[7],brewer.pal(9,"Blues")[5],brewer.pal(9,"Greens")[5],brewer.pal(9,"Greens")[7],brewer.pal(9,"Oranges")[5])
+  ,bty="n",lty=1,lwd=3,cex=2)
+
+aa<-rowMeans(betaNorm)
+nn<-unlist(lapply(split(aa-betaAdj[,i],cgBins),mean))
+lines(as.integer(names(nn)),nn,col=brewer.pal(9,"Reds")[3],lty=1,lwd=3)
+i<-i+1
+
+resMat3<-matrix(ncol=ncol(betaAdj),nrow=100)
+aa<-rowMeans(betaNorm)
+for(i in 1:ncol(betaAdj)) {
+  resMat3[,i]<-unlist(lapply(split(aa-betaAdj[,i],cgBins),mean))
+}
+
+
+meBins<-cut(as.vector(betaAdj[sel,sampleAnno$pam50.full=="Basal"])-rowMeans(temp5[sel,]),breaks=seq(-1,1,length.out=101),labels=F,include.lowest=TRUE)
+cgBins<-cut(rep(annoObj[sel,"saxonovOE"],sum(sampleAnno$pam50.full=="Basal")),breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
+
+
+
+plot(1,type="n",main="",axes=F,xlab="",ylab="",sub="")
+
+##samples
+for(i in ) {
+  oe.glob<-annoObj$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=51)),include.lowest=TRUE,labels=FALSE)
+
+  xx<-table(cut(betaOrig[,i],breaks=seq(0,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+  xx<-table(cut(betaAdj[,i],breaks=seq(0,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins)
+  xx[xx>250]<-250
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  main=i,sub="adjusted",,axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2)
+  mtext(text="Beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="50 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+  oe.glob<-annoObj$weberOE
+  oe.bins<-cut(oe.glob,breaks=quantile(oe.glob,probs=seq(0,1,length.out=101)),include.lowest=TRUE,labels=FALSE)
+
+  xx<-table(cut(rowMeans(betaNorm)-rowMeans(betaAdj[,sampleAnno$pam50.full=="Basal"]),breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins) 
+  xx[xx>250]<-250
+  image(t(xx),breaks=seq(0,250,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  main=i,sub="adjusted",,axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2,at=c(0,.5,1),labels=c(-1,0,1))
+  mtext(text="Mean Normal - Tumor beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="100 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+i<-1
+dsa<-which(asd$cluster==3)
+  
+  xx<-table(cut(rowMeans(betaNorm)-(betaAdj[,dsa[i]]),breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins) 
+  xx[xx>100]<-100
+  image(t(xx),breaks=seq(0,100,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  main=dsa[i],sub="adjusted",,axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2,at=c(0,.5,1),labels=c(-1,0,1))
+  mtext(text="Mean Normal - Tumor beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="100 CpG O/E bins",side=1,las=1,font=2,line=2)
+i<-i+1
+
+  
+  xx<-table(cut(rowMeans(betaNorm)-(betaOrig[,i]),breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins) 
+  xx[xx>100]<-100
+  image(t(xx),breaks=seq(0,100,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  main=dsa[i],sub="adjusted",,axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2,at=c(0,.5,1),labels=c(-1,0,1))
+  mtext(text="Mean Normal - Tumor beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="100 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+  
+  xx<-table(cut(rowMeans(betaNorm)-(betaAdj[,i]),breaks=seq(-1,1,length.out=51),labels=FALSE,include.lowest=TRUE),oe.bins) 
+  xx[xx>100]<-100
+  image(t(xx),breaks=seq(0,100,length.out=51),col=colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(50),
+  main=dsa[i],sub="adjusted",,axes=F
+  )
+  axis(2,lwd=2,cex=1,font=2,las=2,at=c(0,.5,1),labels=c(-1,0,1))
+  mtext(text="Mean Normal - Tumor beta (50 bins)",side=2,las=3,font=2,line=2)
+  mtext(text="100 CpG O/E bins",side=1,las=1,font=2,line=2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 tiff(paste0(HOME,"/fig6_panel_b1.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 cgBins<-cut(annoObj[,"saxonovOE"],breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
@@ -3094,12 +3303,11 @@ mtext("Median lumA beta",side=2,line=4,font=2,cex=2)
 mtext("Scaled density",side=4,line=4,font=2,cex=2,col="grey")
 legend("topright",legend=paste0(rep(c("adj","unadj"),each=2),c(" I"," II")),col=rep(brewer.pal(9,"Oranges")[c(7,5)],2),bty="n",lty=c(1,1,2,2),lwd=3,cex=2)
 #adj
-lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
-lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
-
-lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Greens")[7],lty=1,lwd=3)
-lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],length(sampleAnno$pam50.full=="LumA"))),sd)),col=brewer.pal(9,"Greens")[5],lty=2,lwd=3)
-
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],length(sampleAnno$pam50.full=="LumA"))),median)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(betaAdj[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],length(sampleAnno$pam50.full=="LumA"))),median)),col=brewer.pal(9,"Oranges")[5],lty=1,lwd=3)
+#unadj
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],length(sampleAnno$pam50.full=="LumA"))),median)),col=brewer.pal(9,"Greens")[7],lty=2,lwd=3)
+lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],length(sampleAnno$pam50.full=="LumB"))),median)),col=brewer.pal(9,"Greens")[5],lty=2,lwd=3)
 
 
 
@@ -3150,6 +3358,82 @@ lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="I",sampleAnno$p
 lines(unlist(lapply(split(as.vector(betaOrig[p.info$designType=="II",sampleAnno$pam50.full=="LumA"]),rep(cgBins[p.info$designType=="II"],sum(sampleAnno$pam50.full=="LumA"))),median)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
 
 dev.off()
+
+################################################################################
+################################################################################
+##Create CpG O/E based analysis
+
+temp4<-beta_norm[rownames(annoObj),]
+temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+
+temp5<-beta_norm_adj[rownames(annoObj),]
+temp5<-t(apply(temp5,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
+
+##meth by bin+type
+tiff(paste0(HOME,"/fig6_panel_a3_ringnerTest.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+cgBins<-cut(annoObj[,"saxonovOE"],breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",main="",sub="",xlab="",ylab="",
+  axes=F,xlim=c(0,100),ylim=c(0,1)
+  )
+##I/II density
+dd<-density(cgBins[p.info$designType=="I"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=1)
+dd<-density(cgBins[p.info$designType=="II"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=2)
+##legends
+axis(1,lwd=2,las=1,at=seq(0,100,by=50),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+axis(4,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25,col="grey",col.axis="grey")
+mtext("100 CpG O/E bins",side=1,at=50,line=2.5,font=2,cex=2)
+mtext("Median beta",side=2,line=4,font=2,cex=2)
+mtext("Scaled density",side=4,line=4,font=2,cex=2,col="grey")
+legend("topright",legend=paste0(rep(c("adj","unadj"),each=2),c(" I"," II")),col=rep(brewer.pal(9,"Oranges")[c(7,5)],2),bty="n",lty=c(1,1,2,2),lwd=3,cex=2)
+legend(x=65,y=.45,legend=c(" I"," II"),col="grey",bty="n",lty=c(1,2),lwd=3,cex=2,text.col="grey")
+#orig
+lines(unlist(lapply(split(as.vector(temp4[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],ncol(temp4))),median)),col=brewer.pal(9,"Oranges")[7],lty=2,lwd=3)
+lines(unlist(lapply(split(as.vector(temp4[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],ncol(temp4))),median)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
+#adj
+lines(unlist(lapply(split(as.vector(temp5[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],ncol(temp5))),median)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(temp5[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],ncol(temp5))),median)),col=brewer.pal(9,"Oranges")[5],lty=1,lwd=3)
+
+dev.off()
+
+
+##meth by bin+type
+tiff(paste0(HOME,"/fig6_panel_a3_ringnerTestSd.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+cgBins<-cut(annoObj[,"saxonovOE"],breaks=quantile(annoObj[,"saxonovOE"],seq(0,1,length.out=101)),labels=F,include.lowest=TRUE)
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",main="",sub="",xlab="",ylab="",
+  axes=F,xlim=c(0,100),ylim=c(0,1)
+  )
+##I/II density
+dd<-density(cgBins[p.info$designType=="I"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=1)
+dd<-density(cgBins[p.info$designType=="II"])
+dd$y<-dd$y / max(dd$y)
+lines(dd,col="grey",lwd=3,lty=2)
+##legends
+axis(1,lwd=2,las=1,at=seq(0,100,by=50),font=2,cex.axis=2,line=-0.25)
+axis(2,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25)
+axis(4,at=seq(0,1,by=.5),lwd=2,las=1,font=2,cex.axis=2,line=0.25,col="grey",col.axis="grey")
+mtext("100 CpG O/E bins",side=1,at=50,line=2.5,font=2,cex=2)
+mtext("Median beta",side=2,line=4,font=2,cex=2)
+mtext("Scaled density",side=4,line=4,font=2,cex=2,col="grey")
+legend("topright",legend=paste0(rep(c("adj","unadj"),each=2),c(" I"," II")),col=rep(brewer.pal(9,"Oranges")[c(7,5)],2),bty="n",lty=c(1,1,2,2),lwd=3,cex=2)
+legend(x=65,y=.45,legend=c(" I"," II"),col="grey",bty="n",lty=c(1,2),lwd=3,cex=2,text.col="grey")
+#orig
+lines(unlist(lapply(split(as.vector(temp4[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],ncol(temp4))),sd)),col=brewer.pal(9,"Oranges")[7],lty=2,lwd=3)
+lines(unlist(lapply(split(as.vector(temp4[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],ncol(temp4))),sd)),col=brewer.pal(9,"Oranges")[5],lty=2,lwd=3)
+#adj
+lines(unlist(lapply(split(as.vector(temp5[p.info$designType=="I",]),rep(cgBins[p.info$designType=="I"],ncol(temp5))),sd)),col=brewer.pal(9,"Oranges")[7],lty=1,lwd=3)
+lines(unlist(lapply(split(as.vector(temp5[p.info$designType=="II",]),rep(cgBins[p.info$designType=="II"],ncol(temp5))),sd)),col=brewer.pal(9,"Oranges")[5],lty=1,lwd=3)
+
+dev.off()
+
 
 
 
