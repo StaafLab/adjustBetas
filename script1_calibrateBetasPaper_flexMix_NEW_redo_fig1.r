@@ -571,5 +571,187 @@ text(x=.20,y=10,labels=paste0("L2 y=",round(coefficients(l2n)[2],2),"x+",round(c
 
 dev.off()
 
+save.image(file=paste0(HOME,"/fig1_workspace_luTnbc.RData"))
 
+################################################################################
+##Perturb purity and estimate concordance with BRCA1-pyro
+
+str(getProm())
+# List of 6
+#  $ chrom     : chr "chr17"
+#  $ gene      : chr "672|BRCA1"
+#  $ tssStart  : int 43125483
+#  $ tssDist   : int [1:30] 440 286 225 135 118 110 107 105 73 71 ...
+#  $ probes    : chr [1:30] "cg19531713" "cg19088651" "cg08386886" "cg24806953" ...
+#  $ probeStart: int [1:30] 43125042 43125196 43125257 43125347 43125364 43125372 43125375 43125377 43125409 43125411 ...
+ 
+which.max(apply(betaNew[getProm()$probes,],1,sd))
+# cg09441966 
+#         13 
+
+##source - flexmix loaded on source
+source(paste0(GIT,"/function_correctBetas.r"))
+
+##get ascat tumor
+fracA<-clinAnno[,"ASCAT_TUM_FRAC"]
+
+##get battenberg tumor
+fracB<-clinAnno[,"BATTENBERG_TUMOUR_FRAC"]
+
+quantile(fracA)
+#  0%  25%  50%  75% 100%
+#0.10 0.29 0.44 0.60 0.92
+quantile(fracB)
+#       0%       25%       50%       75%      100%
+#0.1134026 0.3628369 0.5144925 0.6699751 0.9270524
+
+cor(fracA,fracB)
+#[1] 0.9086183
+cor(fracA,fracB,method="spe")
+#[1] 0.9151116
+
+fracTum<-round((fracA+fracB)/2,3)
+rm(fracA,fracB)
+
+##magnitude of change
+unlist(lapply(seq(0.0,.5,by=.02),function(x) {
+  mean(unlist(lapply(1:1000,function(y) mean(abs(fracTum-(fracTum-rnorm(length(fracTum),mean=0,sd=x)))) )) )
+}))
+#  [1] 0.00000000 0.01597357 0.03188370 0.04788066 0.06376187 0.07975185
+#  [7] 0.09578673 0.11196906 0.12753086 0.14345450 0.15954574 0.17559817
+# [13] 0.19130312 0.20749602 0.22317164 0.23915439 0.25507570 0.27099644
+# [19] 0.28675604 0.30291128 0.31867986 0.33451630 0.35195350 0.36630076
+# [25] 0.38345657 0.40048723
+
+##metric
+getAcc<-function(x,ref) {   
+  a1<-sum(x==ref) / length(x)
+  a1<-c( a1 , sum( abs(3-x) == ref ) / length(x) )
+  a1[which.max(a1)]
+}
+getSens<-function(x,ref) {   
+  a1<-sum(x==2 & ref==2 ) / sum( ref==2 )
+  a1<-c( a1 , sum(abs(3-x)==2 & ref==2 ) / sum( ref==2 ) )
+  a1[which.max(a1)]
+}
+getSpec<-function(x,ref) {   
+  a1<-sum(x!=2 & ref!=2 ) / sum( ref!=2 )
+  a1<-c( a1 , sum(abs(3-x)!=2 & ref!=2 ) / sum( ref!=2 ) )
+  a1[which.max(a1)]
+}
+
+resAcc<-matrix(nrow=50,ncol=26)
+resSens<-matrix(nrow=50,ncol=26)
+resSpec<-matrix(nrow=50,ncol=26)
+resBeta<-matrix(nrow=50,ncol=26)
+
+for(i in 1:ncol(resAcc)) {
+  cat(i,"\n")
+  for(j in 1:nrow(resAcc)) {
+  cat(".")
+  fracTum2<-fracTum+rnorm(length(fracTum),mean=0,sd=seq(0.0,.5,by=.02)[i])
+  fracTum2[fracTum2>1]<-1
+  fracTum2[fracTum2<0]<-0
+  b<-adjustBeta(methylation=betaNew["cg09441966",],purity=fracTum2,snames=colnames(betaNew),seed=FALSE)
+    #function(methylation=NULL,purity=NULL,snames=NULL,nmax=3,nrep=3,seed=TRUE)
+
+  gr.n<-b$groups
+  gr.n<-1+ as.integer(gr.n == which.max(unlist(lapply(1:3,function(x) sum(gr.n[clinAnno$BRCA1_PromMetPc_Class==1]==x)))))
+  #table(gr.n,clinAnno$BRCA1_PromMetPc_Class+1)
+  plot(fracTum2,betaNew["cg09441966",],col=1+clinAnno$BRCA1_PromMetPc_Class,pch=16)
+  plot(fracTum2,betaNew["cg09441966",],col=b$groups,pch=16)
+
+  resAcc[j,i]<-getAcc(gr.n,clinAnno$BRCA1_PromMetPc_Class+1)
+
+  resSens[j,i]<-getSens(gr.n,clinAnno$BRCA1_PromMetPc_Class+1)
+
+  resSpec[j,i]<-getSpec(gr.n,clinAnno$BRCA1_PromMetPc_Class+1)
+
+  resBeta[j,i]<-b$avg.betaDiff
+  }
+  cat("\n")
+}
+
+
+tiff(paste0(HOME,"/fig7_panel_b.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(fracTum,betaNew["cg09441966",],col=clinAnno$BRCA1_PromMetPc_Class+1,pch=16,
+  xlab="WGS purity estimate",ylab="BRCA1 cg09441966",xlim=c(0,1),ylim=c(0,1),
+  axes=F
+)
+legend("topleft",legend=c("Pyro unMe","Pyro Me"),pch=16,col=1:2,bty="n")
+axis(2,las=1)
+axis(1,las=1)
+
+set.seed(12345)
+accc<-NULL
+for( i in 1:10) {
+  b<-adjustBeta(methylation=betaNew["cg09441966",],purity=fracTum,snames=colnames(betaNew),seed=FALSE)
+  gr.n<-b$groups
+  gr.n<-1+ as.integer(gr.n == which.max(unlist(lapply(1:3,function(x) sum(gr.n[clinAnno$BRCA1_PromMetPc_Class==1]==x)))))
+  accc<-c(accc,getAcc(gr.n,clinAnno$BRCA1_PromMetPc_Class+1))
+}
+text(.77,.5,labels=paste0("Mean of 10 repetitions\n accuracy: ",signif(mean(accc),3),
+    "\n range(",paste(signif(range(accc),3),collapse="-"),")"),font=2)
+
+dev.off()
+
+tiff(paste0(HOME,"/fig7_panel_c.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,pch=16,type="n",
+  xlab="SD of noise",ylab="Accuracy vs Pyro",xlim=c(0,.5),ylim=c(0.9,1),
+  axes=F
+)
+points(seq(0.0,.5,by=.02),colMeans(resAcc),pch=16)
+for(i in 1:ncol(resAcc) ) {
+  lines(rep(seq(0.0,.5,by=.02)[i],2),quantile(resAcc[,i],c(.025,.975)))
+}
+axis(2,las=1)
+axis(1,las=3,at=seq(0.0,.5,by=.02))
+text(.2,.92,labels="Mean + CI95 50 repetitions per bin",font=2)
+
+dev.off()
+
+tiff(paste0(HOME,"/fig7_panel_d.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
+
+par(mar=c(5.1, 6.1, 4.1 ,6.1),fig=c(0,1,0,1),font=2,font.axis=2,font.lab=2,font.sub=2,new=FALSE)
+plot(1,type="n",
+  xlab="SD of noise",ylab="Mean beta shift post-correction",xlim=c(0,.5),ylim=c(0,-.15),
+  axes=F
+)
+points(seq(0.0,.5,by=.02),colMeans(resBeta),pch=16)
+for(i in 1:ncol(resAcc) ) {
+  lines(rep(seq(0.0,.5,by=.02)[i],2),quantile(resBeta[,i],c(.025,.975)))
+}
+axis(2,las=1)
+axis(1,las=3,at=seq(0.0,.5,by=.02))
+text(.36,-.12,labels="Mean + CI95 50 repetitions per bin",font=2)
+
+dev.off()
+
+##first panel
+a1<-image_read(paste0(HOME,"/fig7_panel_a.tiff"))
+
+a2<-image_read(paste0(HOME,"/fig7_panel_b.tiff"))
+
+a3<-image_read(paste0(HOME,"/fig7_panel_c.tiff"))
+
+a4<-image_read(paste0(HOME,"/fig7_panel_d.tiff"))
+
+out1<-image_append(c(a1,a2),stack = F)
+out2<-image_append(c(a3,a4),stack = F)
+out<-image_append(c(out1,out2),stack = T)
+out<-image_scale(out,"4150x")
+
+image_write(out, path = paste0(HOME,"/fig7_final.tiff"), format = "tiff")
+
+
+
+
+
+
+
+q("no")
 ###END
