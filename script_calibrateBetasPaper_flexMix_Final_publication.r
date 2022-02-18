@@ -1017,8 +1017,10 @@ rm(varF)
 
 resMat2<-resMat
 
-pdf(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
-par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
+tiff(paste0(HOME,"/plos_Figure2_panel_1_bottom.tiff"),width=15*300,height=15*300,units="px",res=300,compression="lzw")
+par(fig=c(0,.5,.5,1),mar=c(6.1,5.1,3.1,1.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
+# pdf(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.pdf"),width=10,height=10,useDingbats=F)
+# par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
 
 boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,11.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
   main="Discrimination of PAM50 Basal vs Luminal split"
@@ -1035,19 +1037,19 @@ boxplot(resMat2[,6]-resMat2[,3],at=9,add=T,width=2,axes=F,lwd=2)
 boxplot(resMat2[,9]-resMat2[,3],at=10,add=T,width=2,axes=F,lwd=2)
 boxplot(resMat2[,12]-resMat2[,3],at=11,add=T,width=2,axes=F,lwd=2)
 
-axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
-  labels=c("Adjusted",
+axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,line=-0.5,
+  labels=c("Adj",
   "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
+  "InfPur",
+  "Adj",
   "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
+  "InfPur",
+  "Adj",
   "Beta>0.3",
-  "InfiniumPurify")
+  "InfPur")
 )
 axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
-mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
+mtext(side=2, "Relative to unadjusted data",font=2,line=3.5,cex=1.2)
 lines(x=c(1,3),y=c(.85,.85),lwd=3)
 text(2,.85,labels="Accuracy",pos=3)
 
@@ -1059,6 +1061,7 @@ text(10,.85,labels="Specificity",pos=3)
 
 ##absolute terms
 par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
+par(fig=c(.5,1,.5,1),mar=c(6.1,5.1,3.1,1.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=T)
 
 boxplot(resMat2[,4],at=1,xlim=c(0.5,11.5),ylim=c(0,1),width=2,axes=F,lwd=2,
   main="Discrimination of PAM50 Basal vs Luminal split"
@@ -1075,19 +1078,19 @@ boxplot(resMat2[,6],at=9,add=T,width=2,axes=F,lwd=2)
 boxplot(resMat2[,9],at=10,add=T,width=2,axes=F,lwd=2)
 boxplot(resMat2[,12],at=11,add=T,width=2,axes=F,lwd=2)
 
-axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
-  labels=c("Adjusted",
+axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,line=-0.5,
+  labels=c("Adj",
   "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
+  "InfPur",
+  "Adj",
   "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
+  "InfPur",
+  "Adj",
   "Beta>0.3",
-  "InfiniumPurify")
+  "InfPur")
 )
 axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
-mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
+mtext(side=2, "Absolute level",font=2,line=3.5,cex=1.2)
 lines(x=c(1,3),y=c(.05,.05),lwd=3)
 text(2,.05,labels="Accuracy",pos=3)
 
@@ -1099,90 +1102,16 @@ text(10,.05,labels="Specificity",pos=3)
 
 dev.off()
 
-##as tiff 
-tiff(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"),width=12*500,height=12*500,units="px",res=500,compression="lzw")
-par(fig=c(0,.5,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=F)
+##ONE
+fig<-image_read(paste0(HOME,"/plos_Figure2_panel_1_bottom.tiff"))
+fig<-image_scale(fig,"2250x")
+fig<-image_crop(fig,"2250x1125")
+fig<-image_annotate(fig,"B", location="+40+26", size = 38, color = "black",font="sans",weight=700)
+fig<-image_annotate(fig,"C", location="+1125+26", size = 38, color = "black",font="sans",weight=700)
+image_write(fig,paste0(HOME,"/plos_Figure2_panel_1_bottom_final.tiff"))
 
-boxplot(resMat2[,4]-resMat2[,1],at=1,xlim=c(0.5,11.5),ylim=c(-1.,1.1),width=2,axes=F,lwd=2,
-  main="Discrimination of PAM50 Basal vs Luminal split"
-)
-abline(h=0,lwd=3,col="lightgrey",lty=2)
-boxplot(resMat2[,7]-resMat2[,1],at=2,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,10]-resMat2[,1],at=3,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,5]-resMat2[,2],at=5,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8]-resMat2[,2],at=6,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,11]-resMat2[,2],at=7,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,6]-resMat2[,3],at=9,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9]-resMat2[,3],at=10,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,12]-resMat2[,3],at=11,add=T,width=2,axes=F,lwd=2)
-
-axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
-  labels=c("Adjusted",
-  "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
-  "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
-  "Beta>0.3",
-  "InfiniumPurify")
-)
-axis(2,at=round(seq(-1,1,length.out=5),2),lwd=2,las=1,cex=1.2)
-mtext(side=2, "Relative to unadjusted data",font=2,line=2.5,cex=1.2)
-lines(x=c(1,3),y=c(.85,.85),lwd=3)
-text(2,.85,labels="Accuracy",pos=3)
-
-lines(x=c(5,7),y=c(.85,.85),lwd=3)
-text(6,.85,labels="Sensitivity",pos=3)
-
-lines(x=c(9,11),y=c(.85,.85),lwd=3)
-text(10,.85,labels="Specificity",pos=3)
-
-##absolute terms
-par(fig=c(.5,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2,cex.lab=1.2,cex.lab=1.2,new=T)
-
-boxplot(resMat2[,4],at=1,xlim=c(0.5,11.5),ylim=c(0,1),width=2,axes=F,lwd=2,
-  main="Discrimination of PAM50 Basal vs Luminal split"
-)
-#abline(h=0,lwd=3,col="lightgrey",lty=2)
-boxplot(resMat2[,7],at=2,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,10],at=3,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,5],at=5,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,8],at=6,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,11],at=7,add=T,width=2,axes=F,lwd=2)
-
-boxplot(resMat2[,6],at=9,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,9],at=10,add=T,width=2,axes=F,lwd=2)
-boxplot(resMat2[,12],at=11,add=T,width=2,axes=F,lwd=2)
-
-axis(1,at=c(1:3,5:7,9:11),lwd=2,las=2,cex=1.2,
-  labels=c("Adjusted",
-  "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
-  "Beta>0.3",
-  "InfiniumPurify",
-  "Adjusted",
-  "Beta>0.3",
-  "InfiniumPurify")
-)
-axis(2,at=seq(0,1,length.out=5),lwd=2,las=1,cex=1.2)
-mtext(side=2, "Absolute level",font=2,line=2.5,cex=1.2)
-lines(x=c(1,3),y=c(.05,.05),lwd=3)
-text(2,.05,labels="Accuracy",pos=3)
-
-lines(x=c(5,7),y=c(.05,.05),lwd=3)
-text(6,.05,labels="Sensitivity",pos=3)
-
-lines(x=c(9,11),y=c(.05,.05),lwd=3)
-text(10,.05,labels="Specificity",pos=3)
-
-dev.off()
-
-rm(resMat2)
+rm(resMat2,fig)
+gc()
 
 ################################################################################  
 ###Do plot with one of the random 500 iterations
@@ -1245,30 +1174,22 @@ sample_anno<-data.frame(adj500=as.character(c1),
 rownames(sample_anno)<-colnames(betaData)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-my_colour = list(unadj500=c("1"="#E41A1C","2"="#377EB8"),
+my_colour = list(unadj500=c("1"="#4DAF4A","2"="#984EA3"),
     adj500=c("1"="#E41A1C","2"="#377EB8"),
     #adj5000=c("a"="red","b"="pink","c"="darkgreen","d"="orange","e"="grey"),
     #umap = c("1" = "#5977ff", "2" = "#f74747"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white")
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080")
     #TNBC = c("BL1"="#E41A1C","BL2"="#377EB8","IM"="#4DAF4A","LAR"="#984EA3","M"="#FF7F00","MSL"="#FFFF33","NA"="#666666","UNS"="#A65628")
     #,hrd3 = c("[0.0,0.2)" ="#FEE0D2" , "[0.2,0.7)" ="#FC9272" ,"[0.7,1.0]"="#EF3B2C" )
   )
 
-tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
-pheatmap(b1,cluster_rows = r1,cluster_cols = c3
-  ,show_rownames=F,show_colnames=F
-  ,main="",fontsize=18,cutree_cols=2
-  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
-  ,treeheight_row=0,treeheight_col=0,legend=F
-)
-dev.off()
-
-tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/plos_Figure2_panel_1.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 pheatmap(b1,cluster_rows = r1,cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",fontsize=18,cutree_cols=2
   ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=TRUE,annotation_names_col=F
-  ,treeheight_row=0,treeheight_col=0,legend=F
+  ,treeheight_row=0,treeheight_col=0,legend=T
 )
 dev.off()
 
@@ -1289,49 +1210,66 @@ sample_anno<-data.frame(unadj500=as.character(c1),
 rownames(sample_anno)<-colnames(betaData)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
 
-tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"),width=10*500,height=12*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/plos_Figure2_panel_2.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 pheatmap(b2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F
   ,main="",cutree_cols=2,fontsize=18
-  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=FALSE,annotation_names_col=F
-  ,treeheight_row=0,treeheight_col=0,legend=F
+  ,annotation_col=sample_anno,annotation_colors=my_colour,annotation_legend=TRUE,annotation_names_col=F
+  ,treeheight_row=0,treeheight_col=0,legend=T
 )
 dev.off()
 
-##do composite plot
-a2<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta.tiff"))
-a1<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_unadjClust_unadjBeta.tiff"))
+##ONE
+fig<-image_read(paste0(HOME,"/plos_Figure2_panel_1.tiff"))
+fig<-image_scale(fig,"1125x")
+fig<-image_crop(fig,"800x1125+0")
+fig<-image_annotate(fig,"Adjusted", gravity="north", size = 38 , color = "black",font="sans",weight=700)
+image_write(fig,paste0(HOME,"/plos_Figure2_panel_1_adj.tiff"),depth=8)
 
-a3<-image_read(paste0(HOME,"/fig2_top100percentBySd_confusionStats_basalVsLuminalSplitIn100randomSets.tiff"))
-a3<-image_crop(a3,"6000x3000")
+##TWO
+fig<-image_read(paste0(HOME,"/plos_Figure2_panel_2.tiff"))
+fig<-image_scale(fig,"1125x")
+fig<-image_crop(fig,"800x1125+0")
+fig<-image_annotate(fig,"Unadjusted", gravity="north", size = 38, color = "black",font="sans",weight=700)
+image_write(fig,paste0(HOME,"/plos_Figure2_panel_2_adj.tiff"),depth=8)
 
-a11<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_pear_eucl_adjClust_adjBeta_annotations.tiff"))
+##ANNO
+fig<-image_read(paste0(HOME,"/plos_Figure2_panel_2.tiff"))
+fig<-image_scale(fig,"1125x")
+fig<-image_crop(fig,"325x1125+800")
+image_write(fig,paste0(HOME,"/plos_Figure2_panel_anno.tiff"),depth=8)
 
-a11<-image_crop(a11,"1000x6000+4300")
+2250-(800+800+325)
+#[1] 325
 
-tiff(paste0(HOME,"/fig2_random500_heatmap_noAnno_white.tiff"),width=.2*500,height=12*500,units="px",res=500,compression="lzw")
-par(mar=c(0,0,0,0))
-plot(1,type="n",axes=F,xlab="",ylab="")
-dev.off()
-a9<-image_read(paste0(HOME,"/fig2_random500_heatmap_noAnno_white.tiff"))
+325/5
+#[1] 108.3333
 
-out<-image_append(c(a9,
-  a1,
-  a9,
-  a2,
-  a9,
-  a11
-  ),stack = F)
-out<-image_scale(out,"6000x")
+##PADDING
+image_write(image_blank(width=65, height=1125, color = "white"),paste0(HOME,"/plos_Figure2_panel_blank.tiff"),format="tiff",density=300)
 
-out<-image_append(c(out,a3),stack=T)
+##MERGE
+fig1<-image_read(paste0(HOME,"/plos_Figure2_panel_blank.tiff"))
+fig2<-image_read(paste0(HOME,"/plos_Figure2_panel_2_adj.tiff"))
+fig3<-image_read(paste0(HOME,"/plos_Figure2_panel_1_adj.tiff"))
+fig4<-image_read(paste0(HOME,"/plos_Figure2_panel_anno.tiff"))
 
-image_write(out, path = paste0(HOME,"/fig2_random500_heatmap_noAnno_unadj_adj_combined.tiff"), format = "tiff")
+fig<-image_append(c(fig1,fig1,fig1,fig2,fig1,fig1,fig3,fig4),stack = F)
+fig<-image_annotate(fig,"A", location="+40+0", size = 38, color = "black",font="sans",weight=700)
+fig<-image_scale(fig,"2250!x1125!")
+image_write(fig,paste0(HOME,"/plos_Figure2_top_final.tiff"),depth=8)
 
-rm(a1,a2,a3,a9,a11,out)
-rm(c1,c2,c3,c4,c5,r1,b,b1,b2,cl)
-
+rm(fig,fig1,fig2,fig3,fig4)
 gc()
+
+##MERGE
+fig1<-image_read(paste0(HOME,"/plos_Figure2_top_final.tiff"))
+fig2<-image_read(paste0(HOME,"/plos_Figure2_panel_1_bottom_final.tiff"))
+
+fig<-image_append(c(fig1,fig2),stack = T)
+fig<-image_scale(fig,"2250x")
+image_write(fig,paste0(HOME,"/plos_Figure2_final.tiff"),depth=8)
 
 ################################################################################
 ################################################################################
@@ -1409,102 +1347,103 @@ my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984
       "NA"="white"
       ),
     TNBC = c("1"="black","0"="lightgrey"),
-    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),stringsAsFactors=FALSE
+    PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080"),stringsAsFactors=FALSE
   )
 
-tiff(paste0(HOME,"/fig3_top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/plos_sFig2_panel_infpur.tiff"),width=15*300,height=15*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 pheatmap(temp5,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
-  ,main="top 5000 by sd, \"infiniumPurify\", adj clust , pearCol/euclRow",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
+  ,main="",cutree_cols=5,fontsize = 12,cellwidth = .9
+  ,annotation_col=sample_anno,annotation_colors=my_colour#,annotation_row=r_anno
 )
 dev.off()
 
-tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
-pheatmap(temp5,cluster_rows = r1, cluster_cols = c3
-  ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
-  ,main="top 5000 by sd, \"infiniumPurify\", adj clust , pearCol/euclRow",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
-)
-dev.off()
-
-tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/plos_sFig2_panel_unadj.tiff"),width=15*300,height=15*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 pheatmap(temp3,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
-  ,main="top 5000 by sd, unadj data, adj clust , pearCol/euclRow",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
+  ,main="",cutree_cols=5,fontsize = 12,cellwidth = .9
+  ,annotation_col=sample_anno,annotation_colors=my_colour#,annotation_row=r_anno
 )
 dev.off()
 
-tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/plos_sFig2_panel_adj.tiff"),width=15*300,height=15*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 pheatmap(temp1,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
-  ,main="top 5000 by sd, adj data, adj clust , pearCol/euclRow",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
+  ,main="",cutree_cols=5,fontsize = 12,cellwidth = .9
+  ,annotation_col=sample_anno,annotation_colors=my_colour#,annotation_row=r_anno
 )
 dev.off()
 
-tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff(paste0(HOME,"/plos_sFig2_panel_inferred.tiff"),width=15*300,height=15*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c3
   ,show_rownames=F,show_colnames=F,treeheight_row =0,treeheight_col =0
-  ,main="top 5000 by sd, \"inferred normal\", adj clust , pearCol/euclRow",cutree_cols=5
-  ,annotation_col=sample_anno,annotation_colors=my_colour
+  ,main="",cutree_cols=5,fontsize = 12,cellwidth = .9
+  ,annotation_col=sample_anno,annotation_colors=my_colour#,annotation_row=r_anno
 )
 dev.off()
 
-tiff(paste0(HOME,"/fig3_splot_top5k_heatmap_whitePadding.tiff"),width=4115/500,height=250,units="px",res=500,compression="lzw")
-par(mar=c(0,0,0,0))
-plot(1,type="n",axes=F,xlab="",ylab="")
-dev.off()
-a6<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_whitePadding.tiff"))
+##PADDING
+image_write(image_blank(width=2470, height=30, color = "white"),paste0(HOME,"/plos_sFig2_panel_1_blank.tiff"),format="tiff",density=300)
 
-##cut away anno legend from 2/3 paste together to form image..
-a1<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_InferredNormalBeta.tiff"))
-a1<-image_crop(a1,"4115x6375+0+125")
-a1<-image_append(c(a6,a1),stack = T)
-a1<-image_annotate(a1, "Inferred normal", size = 200, gravity = "north", color = "black")
+##ONE
+fig<-image_read(paste0(HOME,"/plos_sFig2_panel_inferred.tiff"))
+fig<-image_crop(fig,"2470x4500+700")
+fig2<-image_read(paste0(HOME,"/plos_sFig2_panel_1_blank.tiff"))
+fig<-image_append(c(fig2,fig),stack = T)
+fig<-image_annotate(fig,"Inferred Normal", gravity="north", size = 114, color = "black",font="sans",weight=700)
+#fig<-image_scale(fig,"750x")
+image_write(fig,paste0(HOME,"/plos_sFig2_panel_inferred_adj.tiff"))
 
-a2<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"))
-a2<-image_crop(a2,"4115x6375+0+125")
-a2<-image_append(c(a6,a2),stack = T)
-a2<-image_annotate(a2, "Unadjusted beta", size = 200, gravity = "north", color = "black")
+##TWO
+fig<-image_read(paste0(HOME,"/plos_sFig2_panel_unadj.tiff"))
+fig<-image_crop(fig,"2470x4500+700")
+fig2<-image_read(paste0(HOME,"/plos_sFig2_panel_1_blank.tiff"))
+fig<-image_append(c(fig2,fig),stack = T)
+fig<-image_annotate(fig,"Unadjusted", gravity="north", size = 114, color = "black",font="sans",weight=700)
+#fig<-image_scale(fig,"750x")
+image_write(fig,paste0(HOME,"/plos_sFig2_panel_unadj_adj.tiff"))
 
-a11<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_infiniumPurifyBeta.tiff"))
-a11<-image_crop(a11,"4115x6375+0+125")
-a11<-image_append(c(a6,a11),stack = T)
-a11<-image_annotate(a11, "InfiniumPurify", size = 200, gravity = "north", color = "black")
+##THREE
+fig<-image_read(paste0(HOME,"/plos_sFig2_panel_infpur.tiff"))
+fig<-image_crop(fig,"2470x4500+700")
+fig2<-image_read(paste0(HOME,"/plos_sFig2_panel_1_blank.tiff"))
+fig<-image_append(c(fig2,fig),stack = T)
+fig<-image_annotate(fig,"InfiniumPurify", gravity="north", size = 114, color = "black",font="sans",weight=700)
+#fig<-image_annotate(fig, "A", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
+#fig<-image_scale(fig,"750x")
+image_write(fig,paste0(HOME,"/plos_sFig2_panel_infpur_adj.tiff"))
 
-a3<-image_read(paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"))
-a3<-image_crop(a3,"5000x6375+0+125")
-a3<-image_append(c(a6,a3),stack = T)
-a3<-image_annotate(a3, "Adjusted beta", size = 200, gravity = "north", color = "black")
+##FOUR
+fig<-image_read(paste0(HOME,"/plos_sFig2_panel_adj.tiff"))
+fig<-image_crop(fig,"2470x4500+700")
+fig2<-image_read(paste0(HOME,"/plos_sFig2_panel_1_blank.tiff"))
+fig<-image_append(c(fig2,fig),stack = T)
+fig<-image_annotate(fig,"Adjusted", gravity="north", size = 114, color = "black",font="sans",weight=700)
+#fig<-image_scale(fig,"750x")
+image_write(fig,paste0(HOME,"/plos_sFig2_panel_adj_adj.tiff"))
 
-tiff(paste0(HOME,"/fig3_top5k_heatmap_whitePadding.tiff"),width=.25*500,height=6375/500,units="px",res=500,compression="lzw")
-par(mar=c(0,0,0,0))
-plot(1,type="n",axes=F,xlab="",ylab="")
-dev.off()
-a4<-image_read(paste0(HOME,"/fig3_top5k_heatmap_whitePadding.tiff"))
+##ANNOTATIONS
+fig<-image_read(paste0(HOME,"/plos_sFig2_panel_adj.tiff"))
+fig<-image_crop(fig,"700x4500+3170")
+#fig<-image_scale(fig,"750x")
+image_write(fig,paste0(HOME,"/plos_sFig2_panel_anno.tiff"))
 
-tiff(paste0(HOME,"/fig3_top5k_heatmap_whitePadding2.tiff"),width=4150,height=.1*500,units="px",res=500,compression="lzw")
-par(mar=c(0,0,0,0))
-plot(1,type="n",axes=F,xlab="",ylab="")
-dev.off()
-a5<-image_read(paste0(HOME,"/fig3_top5k_heatmap_whitePadding2.tiff"))
+##MERGE
+fig1<-image_read(paste0(HOME,"/plos_sFig2_panel_inferred_adj.tiff"))
+fig2<-image_read(paste0(HOME,"/plos_sFig2_panel_unadj_adj.tiff"))
+fig3<-image_read(paste0(HOME,"/plos_sFig2_panel_infpur_adj.tiff"))
+fig4<-image_read(paste0(HOME,"/plos_sFig2_panel_adj_adj.tiff"))
+fig5<-image_read(paste0(HOME,"/plos_sFig2_panel_anno.tiff"))
 
-out<-image_append(c(a4,a1,a4,
-  a2,a4,a11,a4,
-  a3
-  ),stack = F)
-out<-image_scale(out,"4150x")
+fig<-image_append(c(fig1,fig2,fig3,fig4,fig5),stack = F)
+fig<-image_scale(fig,"2250x")
+image_write(fig,paste0(HOME,"/plos_sFig2_final.tiff"),depth=8)
 
-out<-image_append(c(a5,out
-  ),stack = T)
-
-image_write(out, path = paste0(HOME,"/fig3_splot_top5k_heatmap_pear_eucl_adjClust_combined.tiff"), format = "tiff")
-
-rm(a1,a2,a3,a4,a5,a11,out)
-rm(c1,c2,c3,c4,r1,temp1,temp2,temp3,temp4)
-
+rm(fig,fig1,fig2,fig3,fig4,fig5)
 gc()
 
 ################################################################################ 
@@ -1619,28 +1558,33 @@ dev.off()
 
 ##Fix panel
 
+image_write(image_blank(width=2470, height=30, color = "white"),paste0(HOME,"/plos_figure3_panel_1_blank.tiff"),format="tiff",density=300)
+
 ##ONE
 fig<-image_read(paste0(HOME,"/plos_figure3_panel_1.tiff"))
-
 fig<-image_crop(fig,"2470x4500+700")
-fig<-image_annotate(fig,"Unadjusted", gravity="north", size = 76, color = "black",font="sans",weight=700)
+fig2<-image_read(paste0(HOME,"/plos_figure3_panel_1_blank.tiff"))
+fig<-image_append(c(fig2,fig),stack = T)
+fig<-image_annotate(fig,"Unadjusted", gravity="north", size = 114, color = "black",font="sans",weight=700)
 #fig<-image_scale(fig,"750x")
 image_write(fig,paste0(HOME,"/plos_figure3_panel_1_adj.tiff"))
 
 ##TWO
 fig<-image_read(paste0(HOME,"/plos_figure3_panel_2.tiff"))
-
 fig<-image_crop(fig,"2470x4500+700")
-fig<-image_annotate(fig,"Adjusted", gravity="north", size = 76, color = "black",font="sans",weight=700)
+fig2<-image_read(paste0(HOME,"/plos_figure3_panel_1_blank.tiff"))
+fig<-image_append(c(fig2,fig),stack = T)
+fig<-image_annotate(fig,"Adjusted", gravity="north", size = 114, color = "black",font="sans",weight=700)
 #fig<-image_scale(fig,"750x")
 image_write(fig,paste0(HOME,"/plos_figure3_panel_2_adj.tiff"))
 
 ##THREE
 fig<-image_read(paste0(HOME,"/plos_figure3_panel_3.tiff"))
-
 fig<-image_crop(fig,"2470x4500+700")
-fig<-image_annotate(fig,"Inferred normal", gravity="north", size = 76, color = "black",font="sans",weight=700)
-fig<-image_annotate(fig, "A", size = 76, gravity="northwest", color = "black",font="sans",weight=700)
+fig2<-image_read(paste0(HOME,"/plos_figure3_panel_1_blank.tiff"))
+fig<-image_append(c(fig2,fig),stack = T)
+fig<-image_annotate(fig,"Inferred normal", gravity="north", size = 114, color = "black",font="sans",weight=700)
+fig<-image_annotate(fig, "A", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
 #fig<-image_scale(fig,"750x")
 image_write(fig,paste0(HOME,"/plos_figure3_panel_3_adj.tiff"))
 
@@ -1658,7 +1602,11 @@ fig4<-image_read(paste0(HOME,"/plos_figure3_panel_4_adj.tiff"))
 
 fig<-image_append(c(fig3,fig1,fig2,fig4),stack = F)
 fig<-image_scale(fig,"2250x")
-image_write(fig,paste0(HOME,"/plos_figure3_panel_A.tiff"))
+#image_write(image_blank(width=125, height=1117, color = "white"),paste0(HOME,"/plos_figure3_panel_A_blank.tiff"),format="tiff",density=300)
+#fig5<-image_read(paste0(HOME,"/plos_figure3_panel_A_blank.tiff"))
+#fig<-image_append(c(fig5,fig,fig5),stack = F)
+
+image_write(fig,paste0(HOME,"/plos_figure3_panel_A.tiff"),depth=8)
 
 ##NEW PANEL
 
@@ -1700,7 +1648,7 @@ legend("topright",legend=c("Unadjusted beta","Adjusted beta"),col=c(1,2),lwd=4,b
 dev.off()
 
 fig<-image_read(paste0(HOME,"/plos_figure3_panel_b.tiff"))
-fig<-image_annotate(fig, "B", size = 76, gravity="northwest", color = "black",font="sans",weight=700)
+fig<-image_annotate(fig, "B", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
 fig<-image_scale(fig,"400x")
 image_write(fig,paste0(HOME,"/plos_figure3_panel_b_adj.tiff"))
 
@@ -1764,51 +1712,40 @@ length(ff)
 temp4<-beta_norm_adj[ff,]
 temp4<-t(apply(temp4,1,function(x) { if(any(is.na(x))) { x[is.na(x)]<-median(x[!is.na(x)]) } ; return(x) } ))
 
-pdf(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
+#pdf(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.pdf"),width=8,height=8,useDingbats=F)
+# par(font=2,font.axis=2,font.lab=2,font.sub=2)
+# plot( rowMeans(temp2[ff,]),rowMeans(temp4[ff,],na.rm=TRUE),pch=16
+#   ,main=""
+#   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
+#   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
+#  )
+# points(rowMeans(temp2[ff,]),rowMeans(temp4[ff,]),pch=16)
+# text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
+# abline(lm(rowMeans(temp4[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
+# axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
+# axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
+# dev.off()
+
+tiff(paste0(HOME,"/plos_figure3_panel_c.tiff"),,width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 plot( rowMeans(temp2[ff,]),rowMeans(temp4[ff,],na.rm=TRUE),pch=16
   ,main=""
   ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
   ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
  )
 points(rowMeans(temp2[ff,]),rowMeans(temp4[ff,]),pch=16)
-text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(temp4[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
-axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
+text(.25,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
+abline(lm(rowMeans(temp4[ff,])~rowMeans(temp2[ff,])),lwd=4,col=2)
+axis(1,lwd=3,las=1,at=seq(0,1,by=.2))
+axis(2,lwd=3,las=1,at=seq(0,1,by=.2))
 dev.off()
 
-tiff(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
-plot( rowMeans(temp2[ff,]),rowMeans(temp4[ff,],na.rm=TRUE),pch=16
-  ,main=""
-  ,xlab="mean inferred normal beta",ylab="mean normal beta 450k GSE67919"
-  ,type="n",las=1,axes=F,xlim=c(0,1),ylim=c(0,1)
- )
-points(rowMeans(temp2[ff,]),rowMeans(temp4[ff,]),pch=16)
-text(.1,.9,paste0("r=",round(sf,2)," | p<2.2e-16 \n",length(ff)," CpGs"))
-abline(lm(rowMeans(temp4[ff,])~rowMeans(temp2[ff,])),lwd=2,col=2)
-axis(1,lwd=2,las=1,at=seq(0,1,by=.2))
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2))
-dev.off()
+fig<-image_read(paste0(HOME,"/plos_figure3_panel_c.tiff"))
+fig<-image_annotate(fig, "C", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
+fig<-image_scale(fig,"400x")
+image_write(fig,paste0(HOME,"/plos_figure3_panel_c_adj.tiff"))
 
 rm(ff,fs)
-
-##combine
-a1<-image_read(paste0(HOME,"/fig3_top5k_betaDistribution_tumors_beforeAfterCorrection.tiff"))
-a1<-image_scale(a1,"2000x")
-
-a2<-image_read(paste0(HOME,"/fig3_top5kBySd_betaNormals_inferredVsActual.tiff"))
-a2<-image_scale(a2,"2000x")
-
-out<-image_append(c(a1,a2
-  ),stack = T)
-out<-image_scale(out,"x2000")
-
-image_write(out, path = paste0(HOME,"/fig3_top5kBySd_betaDistAndInfVAct_combined.tiff"), format = "tiff")
-
-#fig<-image_annotate(fig, "B", size = 38, location=paste0("+",2250*.3+40,"+",40), color = "black",font="sans",weight=700)
-
 
 ##Panel 4 - boxplot purity 5-group adj/unadj                                  ##
 temp1<-do.call("rbind",lapply(res,function(x) x$y.tum))
@@ -1818,62 +1755,44 @@ temp2<-do.call("rbind",lapply(res,function(x) x$y.orig))
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
 c2<-cutree( hclust( as.dist( 1-cor(temp2) ),method="ward.D"),5)
 
-tiff(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_adj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
-par(font=2,font.axis=2,font.lab=2,font.sub=2)#,fig=c(0.25,.75,0,1),mar=c(5.1,4.1,0.1,2.1))
+tiff(paste0(HOME,"/plos_figure3_panel_d.tiff"),,width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 boxplot(fracTum~c1,col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
   ,main=""
   ,xlab="adjusted beta - 5 group",ylab="ABSOLUTE purity"
-  ,type="n",las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
+  ,type="n",las=1,axes=F,xlim=c(0,6),ylim=c(0,1),lwd=4
   )
 axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
+axis(2,lwd=3,las=1,at=seq(0,1,by=.2),font=2)
 text(2,.05,paste0("p(kw-test)=",signif(kruskal.test(fracTum~c1)$p.value,2)))
 dev.off()
 
-tiff(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_unadj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
-par(font=2,font.axis=2,font.lab=2,font.sub=2)#,fig=c(0.25,.75,0,1),mar=c(5.1,4.1,0.1,2.1))
+fig<-image_read(paste0(HOME,"/plos_figure3_panel_d.tiff"))
+fig<-image_annotate(fig, "D", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
+fig<-image_scale(fig,"400x")
+image_write(fig,paste0(HOME,"/plos_figure3_panel_d_adj.tiff"))
+
+tiff(paste0(HOME,"/plos_figure3_panel_e.tiff"),,width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 boxplot(fracTum~c2,col=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984EA3","5"="#FF7F00"),
   ,main=""
   ,xlab="unadjusted beta - 5 group",ylab="ABSOLUTE purity"
-  ,type="n",las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
+  ,type="n",las=1,axes=F,xlim=c(0,6),ylim=c(0,1),lwd=4
   )
 axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
+axis(2,lwd=3,las=1,at=seq(0,1,by=.2),font=2)
 text(2,.05,paste0("p(kw-test)=",signif(kruskal.test(fracTum~c2)$p.value,2)))
 dev.off()
 
-a1<-image_read(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_adj.tiff"))
-# a1<-image_crop(a1,"3000x2000+1000")
-# a1<-image_crop(a1,"2000x2000")
-a1<-image_scale(a1,"x2000")
-
-a2<-image_read(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_unadj.tiff"))
-# a2<-image_crop(a2,"3000x2000+1000")
-# a2<-image_crop(a2,"2000x2000")
-a2<-image_scale(a2,"x2000")
-
-out<-image_append(c(a2,a1
-  ),stack = T)
-out<-image_scale(out,"x2000")
-
-image_write(out, path = paste0(HOME,"/fig3_top5kBySd_clusterVpurity_combined.tiff"), format = "tiff")
+fig<-image_read(paste0(HOME,"/plos_figure3_panel_e.tiff"))
+fig<-image_annotate(fig, "E", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
+fig<-image_scale(fig,"400x")
+image_write(fig,paste0(HOME,"/plos_figure3_panel_e_adj.tiff"))
 
 ##Panel 5 - barplot PAM50
 
-tiff(paste0(HOME,"/fig3_top5kBySd_barplotPam50_adj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
-tt<-table(sampleAnno$pam50.full,factor(c1))
-barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),
-  ,main="",legend.text=F
-  ,xlab="adjusted beta - 5 group",ylab="Fraction of cluster"
-  ,las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
-  )
-#axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
-dev.off()
-
-tiff(paste0(HOME,"/fig3_top5kBySd_barplotPam50_unadj.tiff"),,width=8*500,height=8*500,units="px",res=500,compression="lzw")
-par(font=2,font.axis=2,font.lab=2,font.sub=2)
+tiff(paste0(HOME,"/plos_figure3_panel_f.tiff"),,width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
 tt<-table(sampleAnno$pam50.full,factor(c2))
 barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),
   ,main="",legend.text=T
@@ -1881,65 +1800,54 @@ barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#
   ,las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
   )
 #axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
-axis(2,lwd=2,las=1,at=seq(0,1,by=.2),font=2)
+axis(2,lwd=3,las=1,at=seq(0,1,by=.2),font=2)
 dev.off()
 
-a1<-image_read(paste0(HOME,"/fig3_top5kBySd_barplotPam50_adj.tiff"))
-# a1<-image_crop(a1,"3000x2000+1000")
-# a1<-image_crop(a1,"2000x2000")
-a1<-image_scale(a1,"x2000")
+fig<-image_read(paste0(HOME,"/plos_figure3_panel_f.tiff"))
+fig<-image_annotate(fig, "F", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
+fig<-image_scale(fig,"400x")
+image_write(fig,paste0(HOME,"/plos_figure3_panel_f_adj.tiff"))
 
-a2<-image_read(paste0(HOME,"/fig3_top5kBySd_barplotPam50_unadj.tiff"))
-# a2<-image_crop(a2,"3000x2000+1000")
-# a2<-image_crop(a2,"2000x2000")
-a2<-image_scale(a2,"x2000")
+tiff(paste0(HOME,"/plos_figure3_panel_g.tiff"),,width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(5.1,4.1,4.1,2.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=1,ps=18,new=F)
+tt<-table(sampleAnno$pam50.full,factor(c1))
+barplot(t( t(tt)/colSums(tt)),col=c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),
+  ,main="",legend.text=F
+  ,xlab="adjusted beta - 5 group",ylab="Fraction of cluster"
+  ,las=1,axes=F,xlim=c(0,6),ylim=c(0,1)
+  )
+#axis(1,lwd=0,las=1,at=seq(1,5,by=1),font=2)
+axis(2,lwd=3,las=1,at=seq(0,1,by=.2),font=2)
+dev.off()
 
-out<-image_append(c(a2,a1
-  ),stack = T)
-out<-image_scale(out,"x2000")
-
-image_write(out, path = paste0(HOME,"/fig3_top5kBySd_barplotPam50_combined.tiff"), format = "tiff")
-
-##combine again
-a1<-image_read(paste0(HOME,"/fig3_top5kBySd_clusterVpurity_combined.tiff"))
-# a1<-image_crop(a1,"3000x2000+1000")
-# a1<-image_crop(a1,"2000x2000")
-a1<-image_scale(a1,"x2000")
-
-a2<-image_read(paste0(HOME,"/fig3_top5kBySd_barplotPam50_combined.tiff"))
-# a2<-image_crop(a2,"3000x2000+1000")
-# a2<-image_crop(a2,"2000x2000")
-a2<-image_scale(a2,"x2000")
-
-out<-image_append(c(a1,a2
-  ),stack = F)
-#out<-image_scale(out,"x2000")
-
-image_write(out, path = paste0(HOME,"/fig3_top5kBySd_clusterStat_combined.tiff"), format = "tiff")
-
+fig<-image_read(paste0(HOME,"/plos_figure3_panel_g.tiff"))
+fig<-image_annotate(fig, "G", size = 114, gravity="northwest", color = "black",font="sans",weight=700)
+fig<-image_scale(fig,"400x")
+image_write(fig,paste0(HOME,"/plos_figure3_panel_g_adj.tiff"))
 
 ##MERGE
 image_write(image_blank(width=44, height=400, color = "white"),paste0(HOME,"/plos_figure3_panel_b_blank.tiff"),format="tiff",density=300)
 
 fig1<-image_read(paste0(HOME,"/plos_figure3_panel_b_adj.tiff"))
-fig2<-image_read(paste0(HOME,"/plos_figure3_panel_b_adj.tiff"))
-fig3<-image_read(paste0(HOME,"/plos_figure3_panel_b_adj.tiff"))
-fig4<-image_read(paste0(HOME,"/plos_figure3_panel_b_adj.tiff"))
-fig5<-image_read(paste0(HOME,"/plos_figure3_panel_b_adj.tiff"))
-fig6<-image_read(paste0(HOME,"/plos_figure3_panel_b_adj.tiff"))
+fig2<-image_read(paste0(HOME,"/plos_figure3_panel_c_adj.tiff"))
+fig3<-image_read(paste0(HOME,"/plos_figure3_panel_d_adj.tiff"))
+fig4<-image_read(paste0(HOME,"/plos_figure3_panel_e_adj.tiff"))
+fig5<-image_read(paste0(HOME,"/plos_figure3_panel_f_adj.tiff"))
+fig6<-image_read(paste0(HOME,"/plos_figure3_panel_g_adj.tiff"))
 fig7<-image_read(paste0(HOME,"/plos_figure3_panel_b_blank.tiff"))
 
 fig<-image_append( c( image_append(c(fig1,fig7,fig2,fig7,fig3,fig7,fig7),stack = F),
   image_append(c(fig4,fig7,fig5,fig7,fig6,fig7,fig7),stack = F) ),stack = T )
 fig<-image_scale(fig,"2250x")
-image_write(fig,paste0(HOME,"/plos_figure3_panel_BG.tiff"))
+image_write(fig,paste0(HOME,"/plos_figure3_panel_BG.tiff"),depth=8)
 
 ##MERGE FINAL
 fig1<-image_read(paste0(HOME,"/plos_figure3_panel_A.tiff"))
 fig2<-image_read(paste0(HOME,"/plos_figure3_panel_BG.tiff"))
 fig<-image_append( c(fig1,fig2),stack=T)
 fig<-image_scale(fig,"2250x")
-image_write(fig,paste0(HOME,"/plos_figure3_final.tiff"))
+
+image_write(fig,paste0(HOME,"/plos_figure3_final.tiff"),depth=8)
 
 ################################################################################
 ################################################################################
@@ -2709,7 +2617,7 @@ table(sel)
 #  4524   476 
 
 ##
-tiff(paste0(HOME,"/plos_sFigure3.tiff"),width=15*300,height=15*300,units="px",res=300,compression="lzw")
+tiff(paste0(HOME,"/plos_sFig3.tiff"),width=15*300,height=15*300,units="px",res=300,compression="lzw")
 par(fig=c(0,1,0.5,1),mar=c(6.1,5.1,3.1,1.1),family="sans",font=2,font.axis=2,font.lab=2,font.sub=2,cex=1,cex.main=1,cex.sub=1,cex.lab=1,cex.axis=.8,ps=30,new=F)
 #tiff(paste0(HOME,"/fig5_panel_distalNoTf.tiff"),width=8*500,height=8*500,units="px",res=500,compression="lzw")
 #par(mar=c(6.1, 4.1, 3.1 ,2.1),fig=c(0,1,.5,1),font=2,font.axis=2,font.lab=2,font.sub=2)
@@ -2900,9 +2808,9 @@ a3<-image_annotate(a3, "C", size = 152, location=paste0("+",40,"+",40), color = 
 a3<-image_scale(a3,"1125x")
 image_write(a3,paste0(HOME,"/plos_figure5_panel_c_final.tiff"))
 
-a4<-image_read(paste0(HOME,"/plos_sFigure3.tiff"))
+a4<-image_read(paste0(HOME,"/plos_sFig3.tiff"))
 a4<-image_scale(a4,"1125x")
-image_write(a4,paste0(HOME,"/plos_sFigure3.tiff"))
+image_write(a4,paste0(HOME,"/plos_sFig3_final.tiff"))
 
 a2<-image_read(paste0(HOME,"/plos_figure5_panel_b_final.tiff"))
 a3<-image_read(paste0(HOME,"/plos_figure5_panel_c_final.tiff"))
@@ -3199,9 +3107,10 @@ dev.off()
 
 fig<-image_scale(image_read(paste0(HOME,"/plos_sFig1.tiff")),"1125x")
 #fig<-image_annotate(fig, "A", size = 38, location=paste0("+",40,"+",40), color = "black",font="sans",weight=700)
-image_write(fig,paste0(HOME,"/plos_sFig1.tiff"))
+image_write(fig,paste0(HOME,"/plos_sFig1_final.tiff"))
 image_destroy(fig)
 rm(fig)
+gc()
 
 ################################################################################
 ################################################################################
@@ -3222,16 +3131,76 @@ rm(fig)
 ################################################################################
 ##Show how IM-group dissolves in corrected data
 
+################################################################################
+##
 
 save.image(paste0(HOME,"/workspace_tcgaBrca_full.RData"))
 
 
+################################################################################
+##Fix image size issues
 
+##Fig1
+fig<-image_read(paste0(HOME,"/plos_Figure1_final.tiff"))
+tiff(paste0(HOME,"/plos_Figure1_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
 
+##Fig2
+fig<-image_read(paste0(HOME,"/plos_Figure2_final.tiff"))
+tiff(paste0(HOME,"/plos_Figure2_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
 
+##Fig3
+fig<-image_read(paste0(HOME,"/plos_Figure3_final.tiff"))
+tiff(paste0(HOME,"/plos_Figure3_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
 
+##Fig4
+fig<-image_read(paste0(HOME,"/plos_Figure4_final.tiff"))
+tiff(paste0(HOME,"/plos_Figure4_final_lzw.tiff"),width=(7.5*300)/2,height=(7.5*300),units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
 
+##Fig5
+fig<-image_read(paste0(HOME,"/plos_Figure5_final.tiff"))
+tiff(paste0(HOME,"/plos_Figure5_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
 
+##Fig6
+fig<-image_read(paste0(HOME,"/plos_Figure6_final.tiff"))
+tiff(paste0(HOME,"/plos_Figure6_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
 
+#sFig1
+fig<-image_read(paste0(HOME,"/plos_sFig1_final.tiff"))
+tiff(paste0(HOME,"/plos_sFig1_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
+
+#sFig2
+fig<-image_read(paste0(HOME,"/plos_sFig2_final.tiff"))
+tiff(paste0(HOME,"/plos_sFig2_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
+
+#sFig3
+fig<-image_read(paste0(HOME,"/plos_sFig3_final.tiff"))
+tiff(paste0(HOME,"/plos_sFig3_final_lzw.tiff"),width=7.5*300,height=7.5*300,units="px",res=300,compression="lzw")
+par(fig=c(0,1,0,1),mar=c(0.1,0.1,0.1,0.1))
+plot(fig)
+dev.off()
 
 ###END
