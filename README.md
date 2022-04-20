@@ -14,7 +14,7 @@ When applied to a large cohort of breast cancer tumors gathered by The Cancer Ge
 ![Figure 3 Staaf & Aine 2022](images/fig3.png?raw=true)
 
 ## Scripts 
-The main standalone function can be found in the file "function_correctBetas.r". 
+The standalone function for adjusting Illumina beta values can be found in the file "function_correctBetas.r". The script "example_tcgaBrcaRun.r" illustrates the application of the described approach to the top 5000 most variable CpGs in a cohort of 630 breast cancer samples from TCGA with available data on the levels of 1) exome sequencing, 2) RNA-seq, 3) 450K methylation, 4) SNP6 copy number data. 
 
 ## Licence
 You are free to use, modify or adapt the contents in any way you wish. 
