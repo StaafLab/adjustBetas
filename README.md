@@ -7,7 +7,7 @@ It is a well established fact that tumors are a heterogenous collection of cell 
 ## Approach
 Our approach requires preexisting estimates of tumor purity derived from e.g. WGS/WES or the methylation data itself as well as a reasonably large cohort size. The main aim is to adjust tumor DNA methylation beta values for the influence of non-tumor cells. In cases where the tumor and non-tumor compartment have diametrically opposing methylation states, there is a linear influence of non-tumor methylation on observed beta values. To capture and correct for this, we iteratively apply the [FlexMix](https://cran.r-project.org/web/packages/flexmix) framework to each CpG on the platform to define (up to 3) sample populations with distinct linear relationships with tumor purity. 
 
-![img](images/Figure1.tiff?raw=true&sanitize=true)
+![img](images/Fig1.png?raw=true)
 
 ## Scripts 
 The main standalone function can be found in the file "function_correctBetas.r". 
