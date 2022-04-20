@@ -1,24 +1,9 @@
 #####======================================================================#####
-### Function for correcting Illumina betas for Lund TNBC data set
+### Function for correcting Illumina 450/850K beta values for tumor purity
 #####======================================================================#####
 
 ##Author: Mattias Aine  (mattias.aine@med.lu.se)
-##Affiliation: Lund University / Oncology & Pathology
-
-################################################################################
-##source from Staaf-lab git-clone
-
-#work
-# dir.create("~/hdd1/luTnbc")
-# HOME<-"~/hdd1/luTnbc"
-# GIT<-"~/Documents/luTnbc"
-#home
-# dir.create("I:/data/luTnbc")
-# HOME<-"I:/data/luTnbc"
-# GIT<-"F:/gitProjects/luTnbc"
-
-##source
-#source(paste0(GIT,"/function_correctBetas.r"))
+##Affiliation: Johan Staaf lab @ Lund University / Oncology & Pathology
 
 ################################################################################
 ##load required packages
@@ -30,7 +15,7 @@ if(! "flexmix" %in% names(sessionInfo()$otherPkgs) ) {
   library("flexmix") } 
 
 ################################################################################
-##load required packages
+##main function
 
 ##define function with input = betas and purity estimate
   ##output = line parameters for L1/L2/L3
