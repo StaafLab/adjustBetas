@@ -141,11 +141,11 @@ table(apply(temp3,1,function(x) sum(is.na(x))))
 #   0
 #5000
 
-table(annoObj[rownames(temp1),"chr"])
- # chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 chr21 chr22  chr3  chr4 
- #  557   272   213   255   156   144    98   169   272    69   205   365   130    43    54   248   192 
- # chr5  chr6  chr7  chr8  chr9 
- #  370   392   386   353    57 
+table(cpgAnnotations[rownames(temp1),"chr"])
+#  chr1 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19  chr2 chr20 
+#   545   269   212   254   155   147    99   170   273    68   205   362   129 
+# chr21 chr22  chr3  chr4  chr5  chr6  chr7  chr8  chr9 
+#    42    54   252   191   371   398   389   357    58 
 
 ##do clustering rows+columns
 c1<-cutree( hclust( as.dist( 1-cor(temp1) ),method="ward.D"),5)
@@ -155,11 +155,11 @@ r1<-hclust( dist(temp1),method="ward.D")
 
 sample_anno<-data.frame(adj5000=as.character(c1),
   unadj5000=as.character(c3),
-  ER=sampleAnno$ER,
-  PR=sampleAnno$PR,
-  HER2=sampleAnno$HER2,
-  TNBC=as.character(as.integer(sampleAnno$TNBC)),
-  PAM50=sampleAnno$pam50.full,stringsAsFactors=FALSE
+  ER=sampleAnnotations$ER,
+  PR=sampleAnnotations$PR,
+  HER2=sampleAnnotations$HER2,
+  TNBC=as.character(as.integer(sampleAnnotations$TNBC)),
+  PAM50=sampleAnnotations$pam50.full,stringsAsFactors=FALSE
   )
 rownames(sample_anno)<-colnames(temp1)
 sample_anno<-sample_anno[,ncol(sample_anno):1]
@@ -192,7 +192,7 @@ my_colour = list(unadj5000=c("1"="#E41A1C","2"="#377EB8","3"="#4DAF4A","4"="#984
     PAM50 = c("Basal"="#E41A1C","LumB"="#377EB8","LumA"="#4DAF4A","Her2"="#984EA3","Normal"="#808080","NA"="white"),stringsAsFactors=FALSE
   )
 
-tiff("top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff("top5k_heatmap_pear_eucl_adjClust_adjBeta.tiff",width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp1,cluster_rows = r1, cluster_cols = c2
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
@@ -200,7 +200,7 @@ pheatmap(temp1,cluster_rows = r1, cluster_cols = c2
 )
 dev.off()
 
-tiff("top5k_heatmap_pear_eucl_adjClust_normBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff("top5k_heatmap_pear_eucl_adjClust_normBeta.tiff",width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp2,cluster_rows = r1, cluster_cols = c2
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, adj data, adj clust , pearC/euclR",cutree_cols=5
@@ -208,7 +208,7 @@ pheatmap(temp2,cluster_rows = r1, cluster_cols = c2
 )
 dev.off()
 
-tiff("top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff"),width=10*500,height=13*500,units="px",res=500,compression="lzw")
+tiff("top5k_heatmap_pear_eucl_adjClust_unadjBeta.tiff",width=10*500,height=13*500,units="px",res=500,compression="lzw")
 pheatmap(temp3,cluster_rows = r1, cluster_cols = c2
   ,show_rownames=F,show_colnames=F
   ,main="top 5000 by sd, unadj data, adj clust , pearC/euclR",cutree_cols=5
