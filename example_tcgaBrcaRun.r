@@ -159,7 +159,7 @@ table( unlist(lapply(1:length(res),function(x) { all( unlist(res[[x]],use.names=
 # 5000 
 
 ##same results across runs.
-rm(betaRun,betaNames,testDat,testDat2,res2,cl,no_cores)
+rm(betaRun,betaNames,testDat,testDat2,res2,cl,no_cores,varF)
 
 ################################################################################
 ## object "res" is a list containing collected parameters of fitted lines as well as estimates of TME and pure tumor methylation
